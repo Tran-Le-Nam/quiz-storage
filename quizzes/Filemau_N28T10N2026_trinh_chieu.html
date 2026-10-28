@@ -61,74 +61,29 @@
         .scale-down .options div, .scale-down .tf-row .content, .scale-down .tf-btn { font-size: 1.6vw; }
         
         mjx-container { max-width: 100%; }
-        svg { max-width: 100%; height: auto; }
+        svg { max-width: 100%; height: auto; display: block; margin: 10px auto; overflow: visible; }
+        svg text { font-family: Arial, sans-serif; }
+        img { max-width: 100%; height: auto; }
         .slide { display: none; height: 100%; flex-direction: column; }
         .slide.active { display: flex; }
 
-        /* --- CSS CHO KHUNG ZOOM VÀ TỰ TĂNG CHIỀU CAO (GIỐNG QUIZ_TEMPLATE) --- */
-        .zoom-container {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 10px;
-            margin: 15px 0;
-            position: relative;
-        }
+        /* --- KHUNG ZOOM (không đặt chiều cao cố định, khung tự co giãn theo nội dung) --- */
+        .zoom-container { display: flex; align-items: flex-start; gap: 10px; margin: 15px 0; }
         .zoom-viewport {
-            overflow: hidden;
-            border-radius: 6px;
-            border: 1px solid #ced4da;
-            background: #ffffff;
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: grab;
-            touch-action: none;
-            transition: height 0.1s ease-out; /* Hiệu ứng nới chiều cao mượt mà */
-            position: relative;
+            flex: 1 1 auto; min-width: 0;
+            overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+            max-height: 70vh;
+            border: 1px solid #ced4da; border-radius: 6px; background: #fff;
+            box-sizing: border-box; padding: 4px;
         }
-        .zoom-viewport:active {
-            cursor: grabbing;
-        }
-        .zoom-toolbar {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            background: #f8f9fa;
-            padding: 5px;
-            border-radius: 6px;
-            border: 1px solid #dee2e6;
-            flex-shrink: 0;
-            z-index: 20;
-        }
-        .zoom-btn {
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            font-size: 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.2s, opacity 0.2s;
-            white-space: nowrap;
-        }
-        .zoom-btn:hover:not(:disabled) {
-            background: #138496;
-        }
-        .zoom-btn:disabled {
-            background: #cccccc;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .zoom-media {
-            transition: transform 0.05s ease-out;
-            transform-origin: center center;
-            max-width: 100%;
-            height: auto;
-            user-select: none;
-            pointer-events: none;
-        }
+        .zoom-viewport.can-pan { cursor: grab; }
+        .zoom-viewport.dragging { cursor: grabbing; user-select: none; }
+        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: #f8f9fa; padding: 5px; border-radius: 6px; border: 1px solid #dee2e6; flex-shrink: 0; }
+        .zoom-btn { background: #17a2b8; color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 4px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
+        .zoom-btn:hover:not(:disabled) { background: #138496; }
+        .zoom-btn:disabled { background: #ccc; cursor: not-allowed; opacity: .6; }
+        .zoom-media { display: block; margin: 0 auto; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+        .zoom-media.zoomed { width: var(--zw) !important; max-width: none !important; height: auto !important; }
 
         /* --- CSS MỤC LỤC VỚI HIỆU ỨNG CHẠY LÊN (SLIDE-UP) --- */
         .btn-toc { background: #17a2b8; color: white; cursor: pointer; }
@@ -475,6 +430,9 @@
             
             const activeContent = slides[index].querySelector('.slide-content');
             if (activeContent) activeContent.scrollTop = 0;
+
+            // slide vừa hiện ra mới đo được kích thước SVG/ảnh
+            requestAnimationFrame(initMedia);
         }
         
         function changeSlide(step) {
@@ -594,6 +552,7 @@
                 btn.innerHTML = "Ẩn lời giải";
                 btn.style.background = "#dc3545";
                 contentDiv.classList.add('scale-down'); 
+                requestAnimationFrame(initMedia);   // lời giải vừa hiện, đo lại SVG/ảnh bên trong
             } else {
                 solBox.style.display = 'none';
                 btn.innerHTML = "Xem lời giải";
@@ -605,145 +564,130 @@
         var openTimeout = null;
         var tocTimeout = null;
 
-        // --- HÀM ZOOM: TỰ ĐỘNG DÃN KHUNG VÀ KÉO DI CHUYỂN (PAN) ---
-        function setupImageZoom() {
-            const mediaElements = document.querySelectorAll('.question img, .question .table-responsive svg, .slide img, .slide svg');
-            
-            mediaElements.forEach(el => {
-                if (el.parentNode.classList.contains('zoom-viewport')) return;
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'zoom-container';
-                
-                const viewport = document.createElement('div');
-                viewport.className = 'zoom-viewport';
-                
-                el.parentNode.insertBefore(wrapper, el);
-                viewport.appendChild(el);
-                wrapper.appendChild(viewport);
-                
-                el.classList.add('zoom-media');
-                
-                // Đợi render xong để lấy chiều cao tự nhiên chuẩn xác
-                setTimeout(() => {
-                    const naturalHeight = el.clientHeight || el.getBoundingClientRect().height || 150;
-                    viewport.style.height = naturalHeight + 'px';
-                    el.dataset.naturalHeight = naturalHeight;
-                }, 50);
-                
-                const toolbar = document.createElement('div');
-                toolbar.className = 'zoom-toolbar';
-                
-                let scale = 1.0;
-                let translateX = 0;
-                let translateY = 0;
-                let isDragging = false;
-                let startX = 0, startY = 0;
-                
-                const step = 0.25;
-                const minScale = 1.0;
-                const maxScale = 3.0;
-                
-                const btnIn = document.createElement('button');
-                btnIn.innerHTML = '➕';
-                btnIn.title = 'Phóng to';
-                btnIn.className = 'zoom-btn';
-                
-                const btnOut = document.createElement('button');
-                btnOut.innerHTML = '➖';
-                btnOut.title = 'Thu nhỏ';
-                btnOut.className = 'zoom-btn';
-                
-                const btnReset = document.createElement('button');
-                btnReset.innerHTML = '↺';
-                btnReset.title = 'Trở về mặc định';
-                btnReset.className = 'zoom-btn';
-                
-                function updateTransform() {
-                    const natH = parseFloat(el.dataset.naturalHeight) || el.clientHeight || 150;
-                    el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-                    // Tự động nới rộng chiều cao khung viewport tỷ lệ thuận với mức zoom
-                    viewport.style.height = (natH * scale) + 'px';
-                    
-                    btnIn.disabled = (scale >= maxScale);
-                    btnOut.disabled = (scale <= minScale);
-                    
-                    if (scale <= 1.0) {
-                        translateX = 0;
-                        translateY = 0;
-                        el.style.transform = `translate(0px, 0px) scale(1)`;
+        // =====================================================================
+        // XỬ LÝ SVG / ẢNH
+        // =====================================================================
+
+        // 1) Chuẩn hóa SVG: thêm viewBox nếu thiếu để SVG co giãn đúng
+        function normalizeSvgs() {
+            document.querySelectorAll('.slide svg').forEach(svg => {
+                if (svg.closest('mjx-container') || svg.dataset.normalized) return;
+                const w = parseFloat(svg.getAttribute('width'));
+                const h = parseFloat(svg.getAttribute('height'));
+
+                if (!svg.hasAttribute('viewBox')) {
+                    if (w > 0 && h > 0) {
+                        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                    } else {
+                        try {   // SVG đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi slide/lời giải hiện ra
+                            const b = svg.getBBox();
+                            if (b.width && b.height)
+                                svg.setAttribute('viewBox', `${b.x - 2} ${b.y - 2} ${b.width + 4} ${b.height + 4}`);
+                        } catch (e) { return; }
                     }
                 }
-                
-                function startDrag(clientX, clientY) {
-                    if (scale <= 1.0) return;
-                    isDragging = true;
-                    startX = clientX - translateX;
-                    startY = clientY - translateY;
+                if (svg.hasAttribute('viewBox')) {
+                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }
+                    svg.removeAttribute('height');
+                    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                    svg.dataset.normalized = '1';
                 }
-                
-                function onDrag(clientX, clientY) {
-                    if (!isDragging) return;
-                    translateX = clientX - startX;
-                    translateY = clientY - startY;
-                    el.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-                }
-                
-                function endDrag() {
-                    isDragging = false;
-                }
-                
-                viewport.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
-                window.addEventListener('mousemove', (e) => onDrag(e.clientX, e.clientY));
-                window.addEventListener('mouseup', endDrag);
-                
-                viewport.addEventListener('touchstart', (e) => {
-                    if (e.touches.length === 1) {
-                        startDrag(e.touches[0].clientX, e.touches[0].clientY);
-                    }
-                });
-                window.addEventListener('touchmove', (e) => {
-                    if (e.touches.length === 1) {
-                        onDrag(e.touches[0].clientX, e.touches[0].clientY);
-                    }
-                });
-                window.addEventListener('touchend', endDrag);
-                
-                btnIn.onclick = (e) => {
-                    e.preventDefault();
-                    if (scale < maxScale) {
-                        scale += step;
-                        updateTransform();
-                    }
-                };
-                
-                btnOut.onclick = (e) => {
-                    e.preventDefault();
-                    if (scale > minScale) {
-                        scale -= step;
-                        updateTransform();
-                    }
-                };
-                
-                btnReset.onclick = (e) => {
-                    e.preventDefault();
-                    scale = 1.0;
-                    translateX = 0;
-                    translateY = 0;
-                    updateTransform();
-                };
-                
-                toolbar.appendChild(btnIn);
-                toolbar.appendChild(btnOut);
-                toolbar.appendChild(btnReset);
-                
-                wrapper.appendChild(toolbar);
             });
         }
 
-        window.onload = function() {
-            setTimeout(setupImageZoom, 300);
-        };
+        // 2) Zoom: phóng to bằng cách tăng chiều rộng, khung tự cao theo, cuộn bằng thanh cuộn gốc
+        function setupImageZoom() {
+            const els = document.querySelectorAll('.slide img, .slide svg');
+
+            els.forEach(el => {
+                if (el.closest('.zoom-container') || el.closest('mjx-container') || el.classList.contains('no-zoom')) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'zoom-container';
+                const viewport = document.createElement('div');
+                viewport.className = 'zoom-viewport';
+                el.parentNode.insertBefore(wrapper, el);
+                viewport.appendChild(el);
+                wrapper.appendChild(viewport);
+                el.classList.add('zoom-media');
+
+                let scale = 1;
+                const STEP = 0.25, MIN = 1, MAX = 4;
+
+                const toolbar = document.createElement('div');
+                toolbar.className = 'zoom-toolbar';
+                const mk = (txt, title) => {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.className = 'zoom-btn'; b.innerHTML = txt; b.title = title;
+                    return b;
+                };
+                const btnIn = mk('➕', 'Phóng to'), btnOut = mk('➖', 'Thu nhỏ'), btnReset = mk('↺', 'Mặc định');
+
+                function apply(newScale) {
+                    const cx = viewport.scrollWidth ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth : 0.5;
+                    const cy = viewport.scrollHeight ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight : 0.5;
+
+                    scale = Math.min(MAX, Math.max(MIN, Math.round(newScale * 100) / 100));
+
+                    el.classList.remove('zoomed');
+                    el.style.removeProperty('--zw');
+                    const base = el.getBoundingClientRect().width;   // chiều rộng vừa khung hiện tại
+                    if (scale > 1 && base > 0) {
+                        el.style.setProperty('--zw', (base * scale) + 'px');
+                        el.classList.add('zoomed');
+                        viewport.scrollLeft = cx * viewport.scrollWidth - viewport.clientWidth / 2;
+                        viewport.scrollTop = cy * viewport.scrollHeight - viewport.clientHeight / 2;
+                    }
+                    viewport.classList.toggle('can-pan', el.classList.contains('zoomed'));
+                    btnIn.disabled = scale >= MAX;
+                    btnOut.disabled = scale <= MIN;
+                }
+
+                btnIn.onclick = () => apply(scale + STEP);
+                btnOut.onclick = () => apply(scale - STEP);
+                btnReset.onclick = () => apply(1);
+
+                // Ctrl + lăn chuột để zoom, nhấp đúp để phóng to/reset
+                viewport.addEventListener('wheel', e => {
+                    if (!e.ctrlKey) return;
+                    e.preventDefault();
+                    apply(scale + (e.deltaY < 0 ? STEP : -STEP));
+                }, { passive: false });
+                viewport.addEventListener('dblclick', () => apply(scale > 1 ? 1 : 2));
+
+                // Kéo thả bằng chuột (cảm ứng dùng cuộn gốc của trình duyệt)
+                let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
+                viewport.addEventListener('pointerdown', e => {
+                    if (e.pointerType !== 'mouse' || !el.classList.contains('zoomed')) return;
+                    dragging = true; sx = e.clientX; sy = e.clientY; sl = viewport.scrollLeft; st = viewport.scrollTop;
+                    viewport.setPointerCapture(e.pointerId);
+                    viewport.classList.add('dragging');
+                });
+                viewport.addEventListener('pointermove', e => {
+                    if (!dragging) return;
+                    viewport.scrollLeft = sl - (e.clientX - sx);
+                    viewport.scrollTop = st - (e.clientY - sy);
+                });
+                const stop = () => { dragging = false; viewport.classList.remove('dragging'); };
+                viewport.addEventListener('pointerup', stop);
+                viewport.addEventListener('pointercancel', stop);
+
+                // Đổi kích thước cửa sổ / xoay màn hình: tính lại theo chiều rộng khung mới
+                let rt;
+                window.addEventListener('resize', () => {
+                    clearTimeout(rt);
+                    rt = setTimeout(() => { if (scale > 1) apply(scale); }, 150);
+                });
+
+                toolbar.append(btnIn, btnOut, btnReset);
+                wrapper.appendChild(toolbar);
+                apply(1);
+            });
+        }
+
+        function initMedia() { normalizeSvgs(); setupImageZoom(); }
+
+        window.addEventListener('load', () => setTimeout(initMedia, 300));
 
         // --- XỬ LÝ ĐỘ TRỄ MỞ VÀ ĐÓNG MỤC LỤC ---
         function initToc() {
