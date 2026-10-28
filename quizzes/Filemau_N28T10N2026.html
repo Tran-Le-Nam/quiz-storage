@@ -49,7 +49,10 @@
         #passwordPrompt input { padding: 10px; width: 60%; max-width: 250px; border: 1px solid #b3d4fc; border-radius: 4px; font-size: 16px; }
         #passwordPrompt button { width: auto; padding: 10px 20px; background: #1e88e5; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; margin-left: 10px; }
         
-        svg { max-width: 100%; height: auto; display: block; margin: 10px auto; }
+        /* --- SVG / ẢNH: co giãn theo màn hình, không cắt chữ --- */
+        svg { max-width: 100%; height: auto; display: block; margin: 10px auto; overflow: visible; }
+        svg text { font-family: Arial, sans-serif; }
+        img { max-width: 100%; height: auto; }
         
         /* ===== Bổ sung của bộ chuyển đổi TeX2HTML (PyQt6) ===== */
         .tp { margin: 6px 0; }
@@ -76,70 +79,22 @@
 
 
 
-        /* --- CSS CHO KHUNG ZOOM VÀ TỰ TĂNG CHIỀU CAO --- */
-        .zoom-container {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 10px;
-            margin: 15px 0;
-            position: relative;
-        }
+        /* --- KHUNG ZOOM (không đặt chiều cao cố định, khung tự co giãn theo nội dung) --- */
+        .zoom-container { display: flex; align-items: flex-start; gap: 10px; margin: 15px 0; }
         .zoom-viewport {
-            overflow: hidden;
-            border-radius: 4px;
-            border: 1px solid #b3d4fc;
-            background: #ffffff;
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: height 0.1s ease-out;
-            box-sizing: border-box;
-            cursor: grab;
-            position: relative;
+            flex: 1 1 auto; min-width: 0;
+            overflow: auto; -webkit-overflow-scrolling: touch;
+            border: 1px solid #b3d4fc; border-radius: 4px; background: #fff;
+            box-sizing: border-box; padding: 4px;
         }
-        .zoom-viewport:active {
-            cursor: grabbing;
-        }
-        .zoom-toolbar {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            background: #eef6fc;
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #b3d4fc;
-            flex-shrink: 0;
-            z-index: 20;
-        }
-        .zoom-btn {
-            background: #1e88e5;
-            color: white;
-            border: none;
-            padding: 6px 10px;
-            font-size: 14px;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: background 0.2s, opacity 0.2s;
-            white-space: nowrap;
-        }
-        .zoom-btn:hover:not(:disabled) {
-            background: #1565c0;
-        }
-        .zoom-btn:disabled {
-            background: #b3d4fc;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .zoom-media {
-            transition: transform 0.1s ease-out;
-            transform-origin: center center;
-            max-width: 100%;
-            height: auto;
-            user-select: none;
-            display: block;
-        }
+        .zoom-viewport.can-pan { cursor: grab; }
+        .zoom-viewport.dragging { cursor: grabbing; user-select: none; }
+        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: #eef6fc; padding: 5px; border-radius: 4px; border: 1px solid #b3d4fc; flex-shrink: 0; }
+        .zoom-btn { background: #1e88e5; color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 3px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
+        .zoom-btn:hover:not(:disabled) { background: #1565c0; }
+        .zoom-btn:disabled { background: #b3d4fc; cursor: not-allowed; opacity: .6; }
+        .zoom-media { display: block; margin: 0 auto; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+        .zoom-media.zoomed { width: var(--zw) !important; max-width: none !important; height: auto !important; }
     </style>
     
     <script>
@@ -690,150 +645,137 @@
 
             const solutions = document.querySelectorAll('.solution-box');
             solutions.forEach(box => box.style.display = 'block');
-            
-            setupImageZoom();
+
+            // Chuẩn hóa lại SVG vừa hiện ra (lúc này mới đo được kích thước)
+            initMedia();
+            if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise().then(initMedia);
         }
 
-        // --- HÀM ZOOM CẢI TIẾN: LẤY CHIỀU CAO CHUẨN SAU KHI RENDER & HỖ TRỢ KÉO THẢ (PAN) ---
-        function setupImageZoom() {
-            const mediaElements = document.querySelectorAll('.question img, .question svg, .solution-box img, .solution-box svg, .table-responsive svg');
-            
-            mediaElements.forEach(el => {
-                if (el.closest('.zoom-container')) return;
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'zoom-container';
-                
-                const viewport = document.createElement('div');
-                viewport.className = 'zoom-viewport';
-                
-                el.parentNode.insertBefore(wrapper, el);
-                viewport.appendChild(el);
-                wrapper.appendChild(viewport);
-                
-                el.classList.add('zoom-media');
-                
-                // Đợi render hoàn tất để lấy đúng chiều cao tự nhiên
-                setTimeout(() => {
-                    const naturalHeight = el.clientHeight || el.getBoundingClientRect().height || 150;
-                    viewport.style.height = naturalHeight + 'px';
-                    el.dataset.naturalHeight = naturalHeight;
-                }, 50);
-                
-                const toolbar = document.createElement('div');
-                toolbar.className = 'zoom-toolbar';
-                
-                let scale = 1.0;
-                let posX = 0;
-                let posY = 0;
-                const step = 0.25;
-                const minScale = 1.0;
-                const maxScale = 3.0;
-                
-                const btnIn = document.createElement('button');
-                btnIn.innerHTML = '➕';
-                btnIn.title = 'Phóng to';
-                btnIn.className = 'zoom-btn';
-                
-                const btnOut = document.createElement('button');
-                btnOut.innerHTML = '➖';
-                btnOut.title = 'Thu nhỏ';
-                btnOut.className = 'zoom-btn';
-                
-                const btnReset = document.createElement('button');
-                btnReset.innerHTML = '↺';
-                btnReset.title = 'Trở về mặc định';
-                btnReset.className = 'zoom-btn';
-                
-                function updateZoom() {
-                    const natH = parseFloat(el.dataset.naturalHeight) || el.clientHeight || 150;
-                    el.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-                    viewport.style.height = (natH * scale) + 'px';
-                    
-                    btnIn.disabled = (scale >= maxScale);
-                    btnOut.disabled = (scale <= minScale);
+        // =====================================================================
+        // XỬ LÝ SVG / ẢNH
+        // =====================================================================
+
+        // 1) Chuẩn hóa SVG: thêm viewBox nếu thiếu để SVG co giãn đúng
+        function normalizeSvgs() {
+            document.querySelectorAll('.question svg, .solution-box svg').forEach(svg => {
+                if (svg.closest('mjx-container') || svg.dataset.normalized) return;
+                const w = parseFloat(svg.getAttribute('width'));
+                const h = parseFloat(svg.getAttribute('height'));
+
+                if (!svg.hasAttribute('viewBox')) {
+                    if (w > 0 && h > 0) {
+                        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                    } else {
+                        try {   // SVG đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi hiện lời giải
+                            const b = svg.getBBox();
+                            if (b.width && b.height)
+                                svg.setAttribute('viewBox', `${b.x - 2} ${b.y - 2} ${b.width + 4} ${b.height + 4}`);
+                        } catch (e) { return; }
+                    }
                 }
-                
-                btnIn.onclick = (e) => {
-                    e.preventDefault();
-                    if (scale < maxScale) {
-                        scale += step;
-                        updateZoom();
-                    }
-                };
-                
-                btnOut.onclick = (e) => {
-                    e.preventDefault();
-                    if (scale > minScale) {
-                        scale -= step;
-                        if (scale === 1.0) { posX = 0; posY = 0; }
-                        updateZoom();
-                    }
-                };
-                
-                btnReset.onclick = (e) => {
-                    e.preventDefault();
-                    scale = 1.0;
-                    posX = 0;
-                    posY = 0;
-                    updateZoom();
-                };
-
-                // --- TÍNH NĂNG KÉO THẢ (PAN) KHI PHÓNG TO ---
-                let isDragging = false;
-                let startX, startY;
-
-                viewport.addEventListener('mousedown', (e) => {
-                    if (scale > 1.0) {
-                        isDragging = true;
-                        startX = e.clientX - posX;
-                        startY = e.clientY - posY;
-                        e.preventDefault();
-                    }
-                });
-
-                window.addEventListener('mousemove', (e) => {
-                    if (!isDragging) return;
-                    posX = e.clientX - startX;
-                    posY = e.clientY - startY;
-                    updateZoom();
-                });
-
-                window.addEventListener('mouseup', () => {
-                    isDragging = false;
-                });
-
-                // Hỗ trợ cảm ứng trên thiết bị di động (Touch support)
-                viewport.addEventListener('touchstart', (e) => {
-                    if (scale > 1.0 && e.touches.length === 1) {
-                        isDragging = true;
-                        startX = e.touches[0].clientX - posX;
-                        startY = e.touches[0].clientY - posY;
-                    }
-                }, { passive: true });
-
-                window.addEventListener('touchmove', (e) => {
-                    if (!isDragging || e.touches.length !== 1) return;
-                    posX = e.touches[0].clientX - startX;
-                    posY = e.touches[0].clientY - startY;
-                    updateZoom();
-                }, { passive: true });
-
-                window.addEventListener('touchend', () => {
-                    isDragging = false;
-                });
-                
-                toolbar.appendChild(btnIn);
-                toolbar.appendChild(btnOut);
-                toolbar.appendChild(btnReset);
-                
-                wrapper.appendChild(toolbar);
+                if (svg.hasAttribute('viewBox')) {
+                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }  // giữ kích thước gốc làm trần
+                    svg.removeAttribute('height');
+                    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                    svg.dataset.normalized = '1';
+                }
             });
         }
 
-        window.onload = function() {
-            setTimeout(setupImageZoom, 300);
-        };
+        // 2) Zoom: phóng to bằng cách tăng chiều rộng, khung tự cao theo, cuộn bằng thanh cuộn gốc
+        function setupImageZoom() {
+            const els = document.querySelectorAll('.question img, .question svg, .solution-box img, .solution-box svg');
+
+            els.forEach(el => {
+                if (el.closest('.zoom-container') || el.closest('mjx-container') || el.classList.contains('no-zoom')) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'zoom-container';
+                const viewport = document.createElement('div');
+                viewport.className = 'zoom-viewport';
+                el.parentNode.insertBefore(wrapper, el);
+                viewport.appendChild(el);
+                wrapper.appendChild(viewport);
+                el.classList.add('zoom-media');
+
+                let scale = 1;
+                const STEP = 0.25, MIN = 1, MAX = 4;
+
+                const toolbar = document.createElement('div');
+                toolbar.className = 'zoom-toolbar';
+                const mk = (txt, title) => {
+                    const b = document.createElement('button');
+                    b.type = 'button'; b.className = 'zoom-btn'; b.innerHTML = txt; b.title = title;
+                    return b;
+                };
+                const btnIn = mk('➕', 'Phóng to'), btnOut = mk('➖', 'Thu nhỏ'), btnReset = mk('↺', 'Mặc định');
+
+                function apply(newScale) {
+                    // nhớ vị trí tâm đang xem để phóng to đúng chỗ
+                    const cx = viewport.scrollWidth ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth : 0.5;
+                    const cy = viewport.scrollHeight ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight : 0.5;
+
+                    scale = Math.min(MAX, Math.max(MIN, Math.round(newScale * 100) / 100));
+
+                    el.classList.remove('zoomed');
+                    el.style.removeProperty('--zw');
+                    const base = el.getBoundingClientRect().width;   // chiều rộng vừa khung hiện tại
+                    if (scale > 1 && base > 0) {
+                        el.style.setProperty('--zw', (base * scale) + 'px');
+                        el.classList.add('zoomed');
+                        viewport.scrollLeft = cx * viewport.scrollWidth - viewport.clientWidth / 2;
+                        viewport.scrollTop = cy * viewport.scrollHeight - viewport.clientHeight / 2;
+                    }
+                    viewport.classList.toggle('can-pan', el.classList.contains('zoomed'));
+                    btnIn.disabled = scale >= MAX;
+                    btnOut.disabled = scale <= MIN;
+                }
+
+                btnIn.onclick = () => apply(scale + STEP);
+                btnOut.onclick = () => apply(scale - STEP);
+                btnReset.onclick = () => apply(1);
+
+                // Ctrl + lăn chuột để zoom, nhấp đúp để phóng to/reset
+                viewport.addEventListener('wheel', e => {
+                    if (!e.ctrlKey) return;
+                    e.preventDefault();
+                    apply(scale + (e.deltaY < 0 ? STEP : -STEP));
+                }, { passive: false });
+                viewport.addEventListener('dblclick', () => apply(scale > 1 ? 1 : 2));
+
+                // Kéo thả bằng chuột (cảm ứng dùng cuộn gốc của trình duyệt)
+                let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
+                viewport.addEventListener('pointerdown', e => {
+                    if (e.pointerType !== 'mouse' || !el.classList.contains('zoomed')) return;
+                    dragging = true; sx = e.clientX; sy = e.clientY; sl = viewport.scrollLeft; st = viewport.scrollTop;
+                    viewport.setPointerCapture(e.pointerId);
+                    viewport.classList.add('dragging');
+                });
+                viewport.addEventListener('pointermove', e => {
+                    if (!dragging) return;
+                    viewport.scrollLeft = sl - (e.clientX - sx);
+                    viewport.scrollTop = st - (e.clientY - sy);
+                });
+                const stop = () => { dragging = false; viewport.classList.remove('dragging'); };
+                viewport.addEventListener('pointerup', stop);
+                viewport.addEventListener('pointercancel', stop);
+
+                // Đổi kích thước cửa sổ / xoay điện thoại: tính lại theo chiều rộng khung mới
+                let rt;
+                window.addEventListener('resize', () => {
+                    clearTimeout(rt);
+                    rt = setTimeout(() => { if (scale > 1) apply(scale); }, 150);
+                });
+
+                toolbar.append(btnIn, btnOut, btnReset);
+                wrapper.appendChild(toolbar);
+                apply(1);
+            });
+        }
+
+        function initMedia() { normalizeSvgs(); setupImageZoom(); }
+
+        window.addEventListener('load', () => setTimeout(initMedia, 300));
     </script>
 </body>
 </html>
