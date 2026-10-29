@@ -28,14 +28,14 @@
         }
         html { -webkit-text-size-adjust: 100%; }
         @supports (height: 100dvh) { body, html { height: 100dvh; } }
-
+ 
         /* BẬT TÍNH NĂNG CUỘN CHO NỘI DUNG SLIDE */
         .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; overflow-y: auto; overflow-x: hidden; padding-right: 7px; padding-bottom: 30px; }
         /* Trang trí thanh cuộn */
         .slide-content::-webkit-scrollbar { width: 8px; }
         .slide-content::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         .slide-content::-webkit-scrollbar-thumb:hover { background: #555; }
-
+ 
         .question-box { font-size: var(--fs-q); line-height: 1.5; transition: all 0.3s ease; }
         .solution-box { display: none; font-size: var(--fs-sol); line-height: 1.4; margin-top: 15px; padding: 15px; background: #e2f3f5; border-left: 5px solid #17a2b8; border-radius: 5px; flex-shrink: 0; }
         
@@ -108,11 +108,11 @@
         :root { --zoom-accent: #17a2b8; --zoom-accent-hover: #138496; --zoom-border: #ced4da; --zoom-bar-bg: #f8f9fa; --zoom-max-h: 70vh; }
         .slide { display: none; height: 100%; flex-direction: column; }
         .slide.active { display: flex; }
-
-
+ 
+ 
         .slide-counter { align-self: center; font-weight: bold; color: #555; font-size: var(--fs-btn); white-space: nowrap; min-width: 3.6em; text-align: center; }
         .tf-row { flex-wrap: wrap; gap: 8px; }
-
+ 
         @media (max-width: 700px) {
             .slide-container { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; padding: 8px; }
             .slide-header { margin-bottom: 10px; padding-bottom: 6px; }
@@ -130,46 +130,77 @@
         @media (prefers-reduced-motion: reduce) {
             * { transition: none !important; }
         }
-
+ 
         .author-footer { position: absolute; left: 14px; bottom: 24px; max-width: 38%; z-index: 90; background: #fff; padding: 2px 10px 2px 0; color: #6b7280; font-size: clamp(11px, calc(var(--u) * 0.9), 16px); line-height: 1.3; }
         .author-footer:empty { display: none; }
         @media (max-width: 700px) {
             .author-footer { position: static; max-width: 100%; text-align: center; padding: 6px 0 0; flex-shrink: 0; }
         }
-
-        /* --- CSS MỤC LỤC VỚI HIỆU ỨNG CHẠY LÊN (SLIDE-UP) --- */
+ 
+        /* --- MỤC LỤC: tấm trượt từ dưới lên, có trạng thái từng câu --- */
         .btn-toc { background: #17a2b8; color: white; cursor: pointer; }
-        
-        .toc-modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); z-index: 1000; 
-            display: flex; justify-content: center; align-items: flex-end; 
-            opacity: 0; visibility: hidden; 
-            transition: opacity 0.3s ease, visibility 0.3s ease; 
+        .slide-container:focus { outline: none; }
+ 
+        .toc-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; justify-content: center; align-items: flex-end;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
         }
-        
-        .toc-content { 
-            background: white; width: 80vw; max-width: 900px; max-height: 75vh; 
-            border-radius: 15px 15px 0 0; padding: 25px; 
-            display: flex; flex-direction: column; 
+        .toc-content {
+            background: #fff; width: 80vw; max-width: 900px; max-height: 85vh; max-height: 85dvh;
+            border-radius: 15px 15px 0 0; padding: 12px 25px 0;
+            display: flex; flex-direction: column; box-sizing: border-box;
             box-shadow: 0 -5px 25px rgba(0,0,0,0.3);
             transform: translateY(100%);
-            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
-        
-        .toc-modal.active { 
-            opacity: 1; visibility: visible; 
+        .toc-modal.active { opacity: 1; visibility: visible; }
+        .toc-modal.active .toc-content { transform: translateY(0); }
+ 
+        .toc-handle { flex-shrink: 0; padding: 4px 0 10px; touch-action: none; cursor: grab; }
+        .toc-handle span { display: block; width: 46px; height: 5px; border-radius: 3px; background: #cbd5e1; margin: 0 auto; }
+        .toc-content h3 { flex-shrink: 0; margin: 0 0 4px; color: #0056b3; font-size: var(--fs-toc-h); text-align: center; }
+        .toc-summary { flex-shrink: 0; text-align: center; color: #333; font-size: var(--fs-btn); margin: 2px 0 8px; }
+        .toc-legend { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; margin-bottom: 8px; font-size: clamp(11px, calc(var(--u) * 0.9), 15px); }
+        .toc-legend span { padding: 1px 9px; border: 2px solid; border-radius: 12px; white-space: nowrap; }
+ 
+        .toc-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 2px 8px; }
+        .toc-group-title { margin: 12px 0 4px; color: #495057; font-size: var(--fs-btn); }
+        .toc-group-title:first-child { margin-top: 2px; }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; padding: 8px; }
+ 
+        .toc-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 52px; padding: 6px 4px; border: 2px solid #007bff; border-radius: 6px;
+            background: #e2eefb; color: #0056b3; font-family: inherit; font-weight: bold; font-size: var(--fs-toc);
+            line-height: 1.1; cursor: pointer; user-select: none; transition: filter .15s, transform .15s;
         }
-        .toc-modal.active .toc-content { 
-            transform: translateY(0); 
+        .toc-item .m { display: block; min-height: 1em; font-size: .75em; }
+        .toc-item:hover { filter: brightness(0.94); transform: translateY(-1px); }
+        .toc-item:focus-visible { outline: 3px solid #ff9800; outline-offset: 2px; }
+        .toc-item.current { box-shadow: 0 0 0 3px #fff, 0 0 0 6px #0056b3; }
+        .toc-s-correct { background: #d4edda; border-color: #28a745; color: #155724; }
+        .toc-s-wrong   { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .toc-s-partial { background: #fff3cd; border-color: #ff9800; color: #7a4b00; }
+        .toc-s-picked  { background: #fffbe6; border-style: dashed; border-color: #d39e00; color: #7a5c00; }
+        .toc-s-none    { background: #f1f3f5; border-color: #adb5bd; color: #495057; }
+        .toc-s-empty   { background: #e2eefb; border-color: #007bff; color: #0056b3; }
+ 
+        .toc-footer { flex-shrink: 0; display: flex; justify-content: center; padding: 10px 0 calc(12px + env(safe-area-inset-bottom)); }
+        .toc-close { background: #dc3545; font-size: var(--fs-btn); min-width: 120px; }
+        .toc-close:hover { background: #b02a37; }
+ 
+        @media (max-width: 700px) {
+            .toc-content { width: 100vw; max-width: none; max-height: 88vh; max-height: 88dvh; padding: 8px 14px 0; }
+            .toc-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; padding: 6px; }
         }
-
-        .toc-content h3 { margin-top: 0; color: #0056b3; font-size: var(--fs-toc-h); text-align: center; }
-        .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 10px; overflow-y: auto; padding: 10px; max-height: 50vh; }
-        .toc-item { background: #e2eefb; border: 2px solid #007bff; color: #0056b3; font-weight: bold; font-size: var(--fs-toc); padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; transition: 0.2s; user-select: none; }
-        .toc-item:hover { background: #007bff; color: white; }
-        .toc-item.checked { border-color: #28a745; background: #d4edda; color: #155724; }
-
+        @media (max-height: 500px) {
+            .toc-content { max-height: 96vh; max-height: 96dvh; }
+            .toc-legend { display: none; }
+        }
+ 
         
         /* ===== Bổ sung của bộ chuyển đổi TeX2HTML (PyQt6) ===== */
         .tp { margin: 6px 0; }
@@ -196,7 +227,7 @@
 
 
     </style>
-
+ 
     <script>
         window.MathJax = {
           tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']], processEscapes: true, macros: {"wideparen": ["\\overset{\\frown}{#1}", 1], "overarc": ["\\overset{\\frown}{#1}", 1]} },
@@ -206,7 +237,7 @@
     <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-chtml.min.js"></script>
 </head>
 <body>
-    <div class="slide-container" id="mainContainer">
+    <div class="slide-container" id="mainContainer" tabindex="-1">
         <div class="slide" id="slide-0" data-checked="false" data-type="1"><div class="slide-header"><h2>Câu 1</h2><div style="display: flex; gap: 10px;"><button class="btn-check" onclick="checkAnswer(this, 'slide-0')">Kiểm tra</button><button class="btn-sol" onclick="toggleSolution(this, 'slide-0')">Xem lời giải</button></div></div><div class="slide-content"><div class="question-box"><div class="tp">Cho dãy số $(u_n)$ với $u_1 = -1, u_{n+1} = u_n + 3$ với $n \ge 1$. Ba số hạng đầu tiên của dãy số lần lượt là</div><div class='options'><div onclick="selectOption(this, 'slide-0')" data-correct='true'><b>A.</b> $-1$, $2$, $5$</div><div onclick="selectOption(this, 'slide-0')"><b>B.</b> $1$, $4$, $7$</div><div onclick="selectOption(this, 'slide-0')"><b>C.</b> $4$, $7$, $10$</div><div onclick="selectOption(this, 'slide-0')"><b>D.</b> $-1$, $3$, $7$</div></div></div><div class="solution-box"><div class="tp"><b>Lời giải chi tiết:</b> Ta có $u_1 = -1$, $u_2 = -1 + 3 = 2$, $u_3 = 2 + 3 = 5$.</div></div></div></div>
 <div class="slide" id="slide-1" data-checked="false" data-type="1"><div class="slide-header"><h2>Câu 2</h2><div style="display: flex; gap: 10px;"><button class="btn-check" onclick="checkAnswer(this, 'slide-1')">Kiểm tra</button><button class="btn-sol" onclick="toggleSolution(this, 'slide-1')">Xem lời giải</button></div></div><div class="slide-content"><div class="question-box"><div class="tp">Cho dãy số $(u_n)$ với $\left\{\begin{aligned}&amp;u_1=-2 \\ &amp;u_{n+1}=-2-\dfrac{1}{u_n}, \; n \in \mathbb{N}^*\end{aligned}\right.$. Công thức số hạng tổng quát của dãy số này là</div><div class='options'><div onclick="selectOption(this, 'slide-1')"><b>A.</b> $u_n=-\dfrac{n-1}
 		{n}$</div><div onclick="selectOption(this, 'slide-1')"><b>B.</b> $u_n=\dfrac{n+1}{n}$</div><div onclick="selectOption(this, 'slide-1')" data-correct='true'><b>C.</b> $u_n=-\dfrac{n+1}{n}$</div><div onclick="selectOption(this, 'slide-1')"><b>D.</b> $u_n=-\dfrac{n}{n+1}$</div></div></div><div class="solution-box"><div class="tp"><b>Lời giải chi tiết:</b> Ta có $$u_1=-2=-\dfrac{2}{1}, \; u_2=-2+\dfrac{1}{2}=-\dfrac{3}{2}, \; u_3=-2+\dfrac{2}{3}=-\dfrac{4}{3}, \; u_4=-2+\dfrac{3}{4}=-\dfrac{5}{4}, \; \ldots.$$ Như vậy $u_n=-\dfrac{n+1}{n}$.</div></div></div></div>
@@ -453,7 +484,7 @@
 </svg></div></div></div> Gọi $O$ là giao điểm của $AC$ và $BD$. Chọn $a=1$. Dễ dàng tính được $O\left(0;0;0\right)$, $M\left(-\dfrac{1}{2};0;\dfrac{1}{2} \right)$, $D\left(0;\dfrac{\sqrt{3}}{2};0\right)$ và $C'\left(\dfrac{1}{2};0;1\right)$.<br> Suy ra $\overrightarrow{OM}=\left(-\dfrac{1}{2};0;\dfrac{1}{2} \right)$, $\overrightarrow{C'D}=\left(-\dfrac{1}{2};\dfrac{\sqrt{3}}{2};-1\right)$ và $\overrightarrow{OC'}=\left(\dfrac{1}{2};0;1\right)$.<br> Khi đó $\left\{\begin{aligned}m&amp;=\dfrac{1}{2} \\ n&amp;=0 \\ p&amp;=1\end{aligned}\right. \Rightarrow T=2m+n+p=2\cdot \dfrac{1}{2}+0+1=2$.</div></div></div></div>
         
         <div class="controls">
-            <button class="btn-nav btn-toc" onmouseenter="scheduleOpenToc()" onmouseleave="cancelOpenToc()" onclick="openToc()">📋 Mục lục</button>
+            <button class="btn-nav btn-toc" id="tocBtn" onclick="openToc()" aria-haspopup="dialog">📋 Mục lục</button>
             <button class="btn-nav" id="prevBtn" onclick="changeSlide(-1)" aria-label="Câu trước">Quay lại</button>
             <span class="slide-counter" id="slideCounter" aria-live="polite"></span>
             <button class="btn-nav" id="nextBtn" onclick="changeSlide(1)" aria-label="Câu sau">Tiếp theo</button>
@@ -461,16 +492,22 @@
         </div>
         <div class="author-footer">Liên hệ Trần Lê Nam - 0947 306 694 chuyển TeX sang HTML</div>
     </div>
-
+ 
     <!-- KHUNG POPUP MỤC LỤC -->
-    <div id="tocModal" class="toc-modal" onmouseenter="clearTimeout(tocTimeout)" onmouseleave="scheduleCloseToc()">
+    <div id="tocModal" class="toc-modal" role="dialog" aria-modal="true" aria-labelledby="tocTitle">
         <div class="toc-content">
-            <h3>Danh sách câu hỏi</h3>
-            <div class="toc-grid" id="tocGrid"></div>
-            <button class="btn-nav" style="background: #dc3545; margin-top: 15px; font-size: var(--fs-btn); width: 120px; align-self: center;" onclick="closeToc()">Đóng</button>
+            <div class="toc-handle" id="tocHandle" aria-hidden="true"><span></span></div>
+            <h3 id="tocTitle">Danh sách câu hỏi</h3>
+            <div class="toc-summary" id="tocSummary" aria-live="polite"></div>
+            <div class="toc-legend" aria-hidden="true">
+                <span class="toc-s-correct">✔ Đúng</span><span class="toc-s-wrong">✘ Sai</span><span class="toc-s-partial">½ Đúng một phần</span>
+                <span class="toc-s-picked">● Đã chọn, chưa kiểm tra</span><span class="toc-s-empty">Chưa làm</span>
+            </div>
+            <div class="toc-scroll" id="tocBody"></div>
+            <div class="toc-footer"><button type="button" class="btn-nav toc-close" onclick="closeToc()">Đóng</button></div>
         </div>
     </div>
-
+ 
     <script>
         let currentSlide = 0;
         const slides = document.querySelectorAll('.slide');
@@ -486,7 +523,7 @@
             
             const activeContent = slides[index].querySelector('.slide-content');
             if (activeContent) activeContent.scrollTop = 0;
-
+ 
             // slide vừa hiện ra mới đo được kích thước SVG/ảnh
             requestAnimationFrame(initMedia);
         }
@@ -505,7 +542,7 @@
             options.forEach(opt => opt.classList.remove('selected'));
             element.classList.add('selected');
         }
-
+ 
         function selectTF(btn, slideId, rowIndex, value) {
             const slide = document.getElementById(slideId);
             if (slide.dataset.checked === "true") return;
@@ -514,7 +551,7 @@
             btn.classList.add('selected');
             btn.dataset.val = value;
         }
-
+ 
         function moveNextSlideAns(current, nextIdx, slideId) {
             current.value = current.value.replace('.', ',');
             if (current.value.length > 1) current.value = current.value.slice(0, 1);
@@ -529,12 +566,12 @@
                 if(prevInput) prevInput.focus();
             }
         }
-
+ 
         function checkAnswer(btn, slideId) {
             const slide = document.getElementById(slideId);
             if (slide.dataset.checked === "true") return; 
             const type = slide.dataset.type;
-
+ 
             if (type === "1") { 
                 const selected = slide.querySelector('.options div.selected');
                 if (!selected) { alert("Vui lòng chọn một phương án!"); return; }
@@ -552,7 +589,7 @@
                 let allSelected = true;
                 rows.forEach(row => { if (!row.querySelector('.tf-btn.selected')) allSelected = false; });
                 if (!allSelected) { alert("Vui lòng chọn Đúng hoặc Sai cho tất cả các ý!"); return; }
-
+ 
                 rows.forEach(row => {
                     const selectedBtn = row.querySelector('.tf-btn.selected');
                     const correctVal = row.dataset.correct;
@@ -575,11 +612,11 @@
                 let userAns = "";
                 inputs.forEach(inp => userAns += inp.value);
                 if (userAns.trim() === "") { alert("Vui lòng nhập đáp án!"); return; }
-
+ 
                 const correctAns = slide.dataset.correctans;
                 let studentAnsClean = userAns.replace(/,/g, '.').replace(/\s+/g, '');
                 let trueAnsClean = correctAns.replace(/,/g, '.').replace(/\s+/g, '');
-
+ 
                 const isCorrect = (studentAnsClean === trueAnsClean);
                 inputs.forEach(inp => {
                     inp.readOnly = true;
@@ -591,7 +628,17 @@
                 trueAnsDiv.innerHTML = "Đáp án đúng: " + correctAns;
                 trueAnsDiv.style.display = 'block';
             }
-
+ 
+            // ghi lại kết quả để mục lục tô màu
+            if (type === "1") slide.dataset.result = slide.querySelector('.options div.selected.correct') ? 'correct' : 'wrong';
+            else if (type === "2") {
+                let ok = 0;
+                const rs = slide.querySelectorAll('.tf-row');
+                rs.forEach(r => { const sb = r.querySelector('.tf-btn.selected'); if (sb && sb.dataset.val === r.dataset.correct) ok++; });
+                slide.dataset.result = ok === rs.length ? 'correct' : (ok === 0 ? 'wrong' : 'partial');
+            }
+            else if (type === "3") slide.dataset.result = slide.querySelector('.short-ans-box-slide.correct') ? 'correct' : 'wrong';
+ 
             slide.dataset.checked = "true";
             btn.disabled = true;
         }
@@ -616,10 +663,7 @@
                 contentDiv.classList.remove('scale-down');
             }
         }
-
-        var openTimeout = null;
-        var tocTimeout = null;
-
+ 
         const MEDIA_SCOPE = '.slide';
         // =====================================================================
         // XỬ LÝ SVG / ẢNH (dùng chung cho quiz và trình chiếu)
@@ -627,14 +671,14 @@
         // =====================================================================
         const MEDIA_SVG_SEL = MEDIA_SCOPE.split(',').map(s => s.trim() + ' svg').join(', ');
         const MEDIA_ALL_SEL = MEDIA_SCOPE.split(',').map(s => s.trim()).flatMap(s => [s + ' svg', s + ' img']).join(', ');
-
+ 
         // Chỉ nhận số thuần hoặc "px"; "10cm", "50%", "auto"... trả về NaN để không đọc sai đơn vị
         function svgNum(v) {
             if (v == null) return NaN;
             const m = String(v).trim().match(/^([0-9]*\.?[0-9]+)(px)?$/i);
             return m ? parseFloat(m[1]) : NaN;
         }
-
+ 
         // Đổi id trong từng SVG thành duy nhất để các hình không dùng nhầm clipPath/marker/gradient của nhau
         let __svgSeq = 0;
         function uniquifySvgIds(svg) {
@@ -649,7 +693,7 @@
             const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const urlRe = /url\(\s*(['"]?)#([^)'"\s]+)\1\s*\)/g;
             const fixUrls = str => str.replace(urlRe, (m, q, id) => map[id] ? `url(${q}#${map[id]}${q})` : m);
-
+ 
             svg.querySelectorAll('*').forEach(n => {
                 if (n.tagName.toLowerCase() === 'style') {
                     let css = fixUrls(n.textContent);
@@ -670,7 +714,7 @@
             });
             withId.forEach(n => { n.id = map[n.id]; });
         }
-
+ 
         // Chuẩn hóa SVG: id duy nhất + thêm viewBox nếu thiếu để SVG co giãn đúng
         function normalizeSvgs() {
             document.querySelectorAll(MEDIA_SVG_SEL).forEach(svg => {
@@ -679,7 +723,7 @@
                 if (svg.dataset.normalized) return;
                 const w = svgNum(svg.getAttribute('width'));
                 const h = svgNum(svg.getAttribute('height'));
-
+ 
                 if (!svg.hasAttribute('viewBox')) {
                     if (w > 0 && h > 0) {
                         svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
@@ -699,7 +743,7 @@
                 }
             });
         }
-
+ 
         // Zoom: phóng to bằng cách tăng chiều rộng thật, khung tự cao theo, cuộn bằng thanh cuộn gốc
         const __zoomRefresh = new Set();
         let __zoomResizeTimer;
@@ -707,11 +751,11 @@
             clearTimeout(__zoomResizeTimer);
             __zoomResizeTimer = setTimeout(() => __zoomRefresh.forEach(fn => fn()), 150);
         });
-
+ 
         function setupImageZoom() {
             document.querySelectorAll(MEDIA_ALL_SEL).forEach(el => {
                 if (el.closest('.zoom-container') || el.closest('mjx-container') || el.classList.contains('no-zoom')) return;
-
+ 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'zoom-container';
                 const viewport = document.createElement('div');
@@ -720,10 +764,10 @@
                 viewport.appendChild(el);
                 wrapper.appendChild(viewport);
                 el.classList.add('zoom-media');
-
+ 
                 let scale = 1;
                 const STEP = 0.25, MIN = 1, MAX = 4;
-
+ 
                 const toolbar = document.createElement('div');
                 toolbar.className = 'zoom-toolbar';
                 const mk = (txt, title) => {
@@ -733,13 +777,13 @@
                     return b;
                 };
                 const btnIn = mk('➕', 'Phóng to'), btnOut = mk('➖', 'Thu nhỏ'), btnReset = mk('↺', 'Mặc định');
-
+ 
                 function apply(newScale) {
                     const cx = viewport.scrollWidth ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth : 0.5;
                     const cy = viewport.scrollHeight ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight : 0.5;
-
+ 
                     scale = Math.min(MAX, Math.max(MIN, Math.round(newScale * 100) / 100));
-
+ 
                     el.classList.remove('zoomed');
                     el.style.removeProperty('--zw');
                     const base = el.getBoundingClientRect().width;   // chiều rộng vừa khung hiện tại
@@ -753,12 +797,12 @@
                     btnIn.disabled = scale >= MAX;
                     btnOut.disabled = scale <= MIN;
                 }
-
+ 
                 btnIn.onclick = () => apply(scale + STEP);
                 btnOut.onclick = () => apply(scale - STEP);
                 btnReset.onclick = () => apply(1);
                 __zoomRefresh.add(() => { if (scale > 1) apply(scale); });
-
+ 
                 // Ctrl + lăn chuột để zoom, nhấp đúp để phóng to/reset
                 viewport.addEventListener('wheel', e => {
                     if (!e.ctrlKey) return;
@@ -766,7 +810,7 @@
                     apply(scale + (e.deltaY < 0 ? STEP : -STEP));
                 }, { passive: false });
                 viewport.addEventListener('dblclick', () => apply(scale > 1 ? 1 : 2));
-
+ 
                 // Kéo thả bằng chuột (cảm ứng dùng cuộn gốc của trình duyệt)
                 let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
                 viewport.addEventListener('pointerdown', e => {
@@ -783,115 +827,187 @@
                 const stop = () => { dragging = false; viewport.classList.remove('dragging'); };
                 viewport.addEventListener('pointerup', stop);
                 viewport.addEventListener('pointercancel', stop);
-
+ 
                 toolbar.append(btnIn, btnOut, btnReset);
                 wrapper.appendChild(toolbar);
                 apply(1);
             });
         }
-
+ 
         function initMedia() { normalizeSvgs(); setupImageZoom(); }
-
+ 
         window.addEventListener('load', () => setTimeout(initMedia, 300));
 
-
-                // --- XỬ LÝ ĐỘ TRỄ MỞ VÀ ĐÓNG MỤC LỤC ---
-        function initToc() {
-            const tocGrid = document.getElementById('tocGrid');
-            if (tocGrid.children.length > 0) return;
-            
+ 
+        // --- MỤC LỤC ---
+        const TOC_GROUPS = { '1': 'Phần I · Trắc nghiệm', '2': 'Phần II · Đúng/Sai', '3': 'Phần III · Trả lời ngắn', 'other': 'Câu khác' };
+        const TOC_MARK = { correct: '✔', wrong: '✘', partial: '½', picked: '●', empty: '', none: '' };
+        const TOC_TEXT = { correct: 'đúng', wrong: 'sai', partial: 'đúng một phần', picked: 'đã chọn, chưa kiểm tra', empty: 'chưa làm', none: '' };
+        let tocOpener = null;
+ 
+        // Trạng thái một câu: correct | wrong | partial | picked | empty | none (câu không chấm điểm)
+        function slideState(slide) {
+            const type = slide.dataset.type;
+            if (type !== '1' && type !== '2' && type !== '3') return 'none';
+            if (slide.dataset.checked === 'true') return slide.dataset.result || 'none';
+            if (type === '1' && slide.querySelector('.options div.selected')) return 'picked';
+            if (type === '2' && slide.querySelector('.tf-btn.selected')) return 'picked';
+            if (type === '3' && Array.from(slide.querySelectorAll('.short-ans-box-slide')).some(i => i.value.trim() !== '')) return 'picked';
+            return 'empty';
+        }
+ 
+        function buildToc() {
+            const body = document.getElementById('tocBody');
+            body.textContent = '';
+            const groups = {};
+            const n = { total: 0, done: 0, correct: 0, wrong: 0, partial: 0 };
+ 
             slides.forEach((slide, i) => {
-                const item = document.createElement('div');
-                item.className = 'toc-item';
-                item.innerText = 'C ' + (i + 1);
-                
-                if (slide.dataset.checked === "true") {
-                    item.classList.add('checked');
-                }
-                
-                item.onclick = function() {
-                    currentSlide = i;
-                    showSlide(currentSlide);
-                    closeToc();
-                };
-                tocGrid.appendChild(item);
-            });
-        }
-
-        function scheduleOpenToc() {
-            if (openTimeout) clearTimeout(openTimeout);
-            openTimeout = setTimeout(() => {
-                executeOpenToc();
-            }, 400);
-        }
-
-        function cancelOpenToc() {
-            if (openTimeout) {
-                clearTimeout(openTimeout);
-                openTimeout = null;
-            }
-        }
-
-        function executeOpenToc() {
-            if (tocTimeout) {
-                clearTimeout(tocTimeout);
-                tocTimeout = null;
-            }
-            
-            initToc();
-            
-            const items = document.querySelectorAll('.toc-item');
-            slides.forEach((slide, i) => {
-                if (items[i] && slide.dataset.checked === "true") {
-                    items[i].classList.add('checked');
+                const st = slideState(slide);
+                const key = TOC_GROUPS[slide.dataset.type] && slide.dataset.type !== 'other' ? slide.dataset.type : 'other';
+                (groups[key] = groups[key] || []).push({ i, st });
+                if (st !== 'none') {
+                    n.total++;
+                    if (st === 'correct' || st === 'wrong' || st === 'partial') { n.done++; n[st]++; }
                 }
             });
-            
-            document.getElementById('tocModal').classList.add('active');
+ 
+            const keys = ['1', '2', '3', 'other'].filter(k => groups[k]);
+            keys.forEach(k => {
+                if (keys.length > 1) {
+                    const h = document.createElement('h4');
+                    h.className = 'toc-group-title';
+                    h.textContent = TOC_GROUPS[k];
+                    body.appendChild(h);
+                }
+                const grid = document.createElement('div');
+                grid.className = 'toc-grid';
+                groups[k].forEach(({ i, st }) => {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'toc-item toc-s-' + st + (i === currentSlide ? ' current' : '');
+                    b.dataset.idx = i;
+                    const label = 'Câu ' + (i + 1) + (TOC_TEXT[st] ? ', ' + TOC_TEXT[st] : '') + (i === currentSlide ? ' (đang xem)' : '');
+                    b.setAttribute('aria-label', label);
+                    b.title = label;
+                    if (i === currentSlide) b.setAttribute('aria-current', 'true');
+                    const num = document.createElement('span'); num.textContent = i + 1;
+                    const mark = document.createElement('span'); mark.className = 'm'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = TOC_MARK[st];
+                    b.append(num, mark);
+                    b.onclick = () => { currentSlide = i; showSlide(i); closeToc(true); };
+                    grid.appendChild(b);
+                });
+                body.appendChild(grid);
+            });
+ 
+            let txt = 'Đã kiểm tra ' + n.done + '/' + n.total + ' câu';
+            if (n.done) txt += ' · Đúng ' + n.correct + ' · Sai ' + n.wrong + (n.partial ? ' · Một phần ' + n.partial : '');
+            document.getElementById('tocSummary').textContent = n.total ? txt : '';
         }
-
+ 
         function openToc() {
-            cancelOpenToc();
-            executeOpenToc();
+            const modal = document.getElementById('tocModal');
+            if (modal.classList.contains('active')) return;
+            tocOpener = document.activeElement;
+            buildToc();
+            modal.classList.add('active');
+            // đợi hộp hiện ra rồi mới chuyển tiêu điểm vào câu đang xem
+            setTimeout(() => {
+                const cur = modal.querySelector('.toc-item.current') || modal.querySelector('.toc-item');
+                if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: 'center', inline: 'nearest' }); }
+            }, 60);
         }
-
-        function scheduleCloseToc() {
-            if (tocTimeout) clearTimeout(tocTimeout);
-            tocTimeout = setTimeout(() => {
-                document.getElementById('tocModal').classList.remove('active');
-            }, 400);
+ 
+        // toSlides = true khi vừa chọn một câu: đưa tiêu điểm về vùng trình chiếu để Space/mũi tên tiếp tục chuyển câu
+        function closeToc(toSlides) {
+            const modal = document.getElementById('tocModal');
+            if (!modal.classList.contains('active')) return;
+            modal.classList.remove('active');
+            if (toSlides) document.getElementById('mainContainer').focus({ preventScroll: true });
+            else if (tocOpener && document.contains(tocOpener) && tocOpener.focus) tocOpener.focus({ preventScroll: true });
+            tocOpener = null;
         }
-
-        function closeToc() {
-            if (openTimeout) {
-                clearTimeout(openTimeout);
-                openTimeout = null;
+ 
+        (function () {
+            const modal = document.getElementById('tocModal');
+ 
+            // bấm vào nền tối để đóng (bỏ qua khi kéo chuột từ trong hộp ra ngoài)
+            let downOnBackdrop = false;
+            modal.addEventListener('pointerdown', e => { downOnBackdrop = (e.target === modal); });
+            modal.addEventListener('click', e => { if (e.target === modal && downOnBackdrop) closeToc(); });
+ 
+            // bàn phím: mũi tên di chuyển giữa các ô, Tab quay vòng trong hộp thoại
+            function vertical(items, cur, dir) {
+                const r = items[cur].getBoundingClientRect(), cx = r.left + r.width / 2;
+                let best = null, bestDy = Infinity, bestDx = Infinity;
+                items.forEach(it => {
+                    if (it === items[cur]) return;
+                    const b = it.getBoundingClientRect();
+                    const dy = dir > 0 ? b.top - r.top : r.top - b.top;
+                    if (dy <= 4) return;                           // chỉ xét các hàng phía dưới (hoặc phía trên)
+                    const dx = Math.abs(b.left + b.width / 2 - cx);
+                    if (dy < bestDy - 4 || (Math.abs(dy - bestDy) <= 4 && dx < bestDx)) { best = it; bestDy = dy; bestDx = dx; }
+                });
+                return best;
             }
-            if (tocTimeout) {
-                clearTimeout(tocTimeout);
-                tocTimeout = null;
-            }
-            document.getElementById('tocModal').classList.remove('active');
-        }
-
-        // --- ĐIỀU HƯỚNG BẰNG BÀN PHÍM, VUỐT VÀ TOÀN MÀN HÌNH ---
+            modal.addEventListener('keydown', e => {
+                if (e.ctrlKey || e.metaKey || e.altKey) return;
+                if (e.key === 'Tab') {
+                    const f = Array.from(modal.querySelectorAll('button'));
+                    if (e.shiftKey && document.activeElement === f[0]) { f[f.length - 1].focus(); e.preventDefault(); }
+                    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { f[0].focus(); e.preventDefault(); }
+                    return;
+                }
+                const items = Array.from(modal.querySelectorAll('.toc-item'));
+                const cur = items.indexOf(document.activeElement);
+                if (cur < 0) return;
+                let target;
+                switch (e.key) {
+                    case 'ArrowRight': target = items[cur + 1]; break;
+                    case 'ArrowLeft': target = items[cur - 1]; break;
+                    case 'ArrowDown': target = vertical(items, cur, 1); break;
+                    case 'ArrowUp': target = vertical(items, cur, -1); break;
+                    case 'Home': target = items[0]; break;
+                    case 'End': target = items[items.length - 1]; break;
+                    default: return;
+                }
+                if (target) target.focus();
+                e.preventDefault();
+            });
+ 
+            // điện thoại: vuốt thanh nắm xuống để đóng
+            const content = modal.querySelector('.toc-content'), handle = document.getElementById('tocHandle');
+            let y0 = 0, dy = 0, dragging = false;
+            handle.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; dy = 0; dragging = true; content.style.transition = 'none'; }, { passive: true });
+            handle.addEventListener('touchmove', e => { if (!dragging) return; dy = Math.max(0, e.touches[0].clientY - y0); content.style.transform = 'translateY(' + dy + 'px)'; }, { passive: true });
+            const endDrag = () => {
+                if (!dragging) return;
+                dragging = false;
+                content.style.transition = ''; content.style.transform = '';
+                if (dy > 90) closeToc();
+            };
+            handle.addEventListener('touchend', endDrag);
+            handle.addEventListener('touchcancel', endDrag);
+        })();
+ 
+                // --- ĐIỀU HƯỚNG BẰNG BÀN PHÍM, VUỐT VÀ TOÀN MÀN HÌNH ---
         function toggleFullscreen() {
             if (!document.fullscreenEnabled) return;
             if (document.fullscreenElement) document.exitFullscreen();
             else document.documentElement.requestFullscreen().catch(() => {});
         }
         if (!document.fullscreenEnabled) document.getElementById('fsBtn').style.display = 'none';
-
+ 
         document.addEventListener('keydown', e => {
             if (e.ctrlKey || e.metaKey || e.altKey) return;
             const t = e.target, tag = t && t.tagName;
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;   // đang gõ đáp án
             const tocOpen = document.getElementById('tocModal').classList.contains('active');
-
+ 
             if (e.key === 'Escape') { if (tocOpen) { closeToc(); e.preventDefault(); } return; }
             if (e.key === 't' || e.key === 'T') { tocOpen ? closeToc() : openToc(); e.preventDefault(); return; }
             if (tocOpen) return;
-
+ 
             switch (e.key) {
                 case 'ArrowRight': case 'PageDown': changeSlide(1); break;
                 case 'ArrowLeft': case 'PageUp': changeSlide(-1); break;
@@ -903,7 +1019,7 @@
             }
             e.preventDefault();
         });
-
+ 
         // Vuốt ngang để chuyển câu (bỏ qua khi vuốt trong ảnh đang phóng to, công thức, bảng, ô nhập)
         (function () {
             let x0 = 0, y0 = 0, t0 = 0, track = false;
@@ -920,7 +1036,7 @@
                 if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy) && Date.now() - t0 < 800) changeSlide(dx < 0 ? 1 : -1);
             }, { passive: true });
         })();
-
+ 
         if (slides.length) showSlide(currentSlide);
     </script>
 </body>
