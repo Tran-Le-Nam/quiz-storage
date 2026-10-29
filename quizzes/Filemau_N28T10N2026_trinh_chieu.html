@@ -6,10 +6,29 @@
     <title>Test thử 6 câu - Trình Chiếu</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #eccfa0; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        .slide-container { width: 95vw; height: 95vh; background: #fff; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; position: relative; padding: 10px; box-sizing: border-box; }
+        .slide-container { width: 95vw; height: 95vh; height: 95dvh; background: #fff; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; position: relative; padding: 10px; box-sizing: border-box; }
         .slide-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0056b3; padding-bottom: 10px; margin-bottom: 20px; flex-shrink: 0; }
-        .slide-header h2 { margin: 0; color: #0056b3; font-size: 2vw; }
+        .slide-header h2 { margin: 0; color: #0056b3; font-size: var(--fs-title); }
         
+        /* --- CỠ CHỮ CO GIÃN THEO MÀN HÌNH ---
+           --u kết hợp chiều rộng và chiều cao nên màn hình dọc (điện thoại) và ngang đều vừa mắt;
+           clamp() chặn nhỏ nhất để dễ đọc trên điện thoại, chặn lớn nhất để không phình trên màn hình lớn. */
+        :root {
+            --u: calc(0.65vw + 0.65vh);
+            --fs-title: clamp(16px, calc(var(--u) * 1.8), 34px);
+            --fs-q: clamp(16px, calc(var(--u) * 2), 40px);
+            --fs-q-sm: clamp(15px, calc(var(--u) * 1.6), 34px);
+            --fs-sol: clamp(15px, calc(var(--u) * 1.8), 36px);
+            --fs-opt: clamp(14px, calc(var(--u) * 1.6), 32px);
+            --fs-btn: clamp(13px, calc(var(--u) * 1.25), 22px);
+            --fs-toc-h: clamp(16px, calc(var(--u) * 1.5), 28px);
+            --fs-toc: clamp(13px, calc(var(--u) * 1.2), 22px);
+            --box-w: clamp(34px, calc(var(--u) * 3.2), 64px);
+            --box-h: clamp(42px, calc(var(--u) * 4), 80px);
+        }
+        html { -webkit-text-size-adjust: 100%; }
+        @supports (height: 100dvh) { body, html { height: 100dvh; } }
+
         /* BẬT TÍNH NĂNG CUỘN CHO NỘI DUNG SLIDE */
         .slide-content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; overflow-y: auto; overflow-x: hidden; padding-right: 7px; padding-bottom: 30px; }
         /* Trang trí thanh cuộn */
@@ -17,8 +36,8 @@
         .slide-content::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         .slide-content::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        .question-box { font-size: 2.2vw; line-height: 1.5; transition: all 0.3s ease; }
-        .solution-box { display: none; font-size: 2vw; line-height: 1.4; margin-top: 15px; padding: 15px; background: #e2f3f5; border-left: 5px solid #17a2b8; border-radius: 5px; flex-shrink: 0; }
+        .question-box { font-size: var(--fs-q); line-height: 1.5; transition: all 0.3s ease; }
+        .solution-box { display: none; font-size: var(--fs-sol); line-height: 1.4; margin-top: 15px; padding: 15px; background: #e2f3f5; border-left: 5px solid #17a2b8; border-radius: 5px; flex-shrink: 0; }
         
         /* Trắc nghiệm 1 lựa chọn */
         .options { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; }
@@ -31,23 +50,23 @@
         
         /* Trắc nghiệm Đúng/Sai */
         .tf-row { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; padding: 8px; margin-top: 10px; border: 2px solid #ddd; border-radius: 3px; }
-        .tf-row .content { flex-grow: 1; padding-right: 15px; font-size: 2vw; }
+        .tf-row .content { flex-grow: 1; padding-right: 15px; font-size: var(--fs-sol); }
         .tf-actions { display: flex; gap: 10px; }
-        .tf-btn { padding: 10px 20px; font-size: 1.8vw; font-weight: bold; border: 2px solid #ccc; border-radius: 5px; cursor: pointer; background: #fff; transition: 0.2s; user-select: none; }
+        .tf-btn { padding: 10px 20px; font-size: var(--fs-opt); font-weight: bold; border: 2px solid #ccc; border-radius: 5px; cursor: pointer; background: #fff; transition: 0.2s; user-select: none; }
         .tf-btn.selected { border-color: #007bff; background: #e2eefb; color: #0056b3; }
         .tf-btn.correct { background: #d4edda !important; border-color: #28a745 !important; color: #155724; }
         .tf-btn.incorrect { background: #f8d7da !important; border-color: #dc3545 !important; color: #721c24; }
         
         /* Trắc nghiệm Trả lời ngắn */
         .short-ans-group-slide { display: flex; gap: 5px; margin-top: 15px; }
-        .short-ans-box-slide { width: 4vw; height: 5vw; font-size: 2vw; text-align: center; border: 1px solid #007bff; border-radius: 8px; font-weight: bold; color: #0056b3; box-sizing: border-box; }
+        .short-ans-box-slide { width: var(--box-w); height: var(--box-h); font-size: var(--fs-sol); text-align: center; border: 1px solid #007bff; border-radius: 8px; font-weight: bold; color: #0056b3; box-sizing: border-box; }
         .short-ans-box-slide.correct { background: #d4edda; border-color: #28a745; color: #155724; }
         .short-ans-box-slide.incorrect { background: #f8d7da; border-color: #dc3545; color: #721c24; }
-        .true-ans-text { display: none; color: #28a745; font-weight: bold; font-size: 2vw; margin-top: 15px; }
+        .true-ans-text { display: none; color: #28a745; font-weight: bold; font-size: var(--fs-sol); margin-top: 15px; }
         
         /* CSS Nút điều khiển */
         .controls { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; background: #fff; padding-left: 10px; box-shadow: -10px 0px 10px white; }
-        button { padding: 10px 20px; font-size: 1.5vw; cursor: pointer; border: none; border-radius: 2px; font-weight: bold; transition: 0.3s; }
+        button { padding: 10px 20px; font-size: var(--fs-btn); cursor: pointer; border: none; border-radius: 2px; font-weight: bold; transition: 0.3s; }
         .btn-nav { background: #007bff; color: white; }
         .btn-nav:hover { background: #0056b3; }
         .btn-nav:disabled { background: #ccc; cursor: not-allowed; }
@@ -57,33 +76,60 @@
         .btn-check:hover:not(:disabled) { background: #e0a800; }
         .btn-check:disabled { background: #ccc; color: #666; cursor: not-allowed; }
         
-        .scale-down .question-box { font-size: 1.8vw; }
-        .scale-down .options div, .scale-down .tf-row .content, .scale-down .tf-btn { font-size: 1.6vw; }
+        .scale-down .question-box { font-size: var(--fs-q-sm); }
+        .scale-down .options div, .scale-down .tf-row .content, .scale-down .tf-btn { font-size: var(--fs-opt); }
         
         mjx-container { max-width: 100%; }
+        /* --- SVG / ẢNH + KHUNG ZOOM DÙNG CHUNG (khung tự co giãn, không đặt chiều cao cố định) --- */
+        :root {
+            --zoom-accent: #1e88e5; --zoom-accent-hover: #1565c0;
+            --zoom-border: #b3d4fc; --zoom-bar-bg: #eef6fc; --zoom-max-h: none;
+        }
         svg { max-width: 100%; height: auto; display: block; margin: 10px auto; overflow: visible; }
         svg text { font-family: Arial, sans-serif; }
         img { max-width: 100%; height: auto; }
-        .slide { display: none; height: 100%; flex-direction: column; }
-        .slide.active { display: flex; }
-
-        /* --- KHUNG ZOOM (không đặt chiều cao cố định, khung tự co giãn theo nội dung) --- */
         .zoom-container { display: flex; align-items: flex-start; gap: 10px; margin: 15px 0; }
         .zoom-viewport {
             flex: 1 1 auto; min-width: 0;
-            overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-            max-height: 70vh;
-            border: 1px solid #ced4da; border-radius: 6px; background: #fff;
+            overflow: auto; -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--zoom-border); border-radius: 4px; background: #fff;
             box-sizing: border-box; padding: 4px;
         }
-        .zoom-viewport.can-pan { cursor: grab; }
+        /* chỉ giới hạn chiều cao và giữ cuộn bên trong khi ảnh đang được phóng to */
+        .zoom-viewport.can-pan { cursor: grab; max-height: var(--zoom-max-h); overscroll-behavior: contain; }
         .zoom-viewport.dragging { cursor: grabbing; user-select: none; }
-        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: #f8f9fa; padding: 5px; border-radius: 6px; border: 1px solid #dee2e6; flex-shrink: 0; }
-        .zoom-btn { background: #17a2b8; color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 4px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
-        .zoom-btn:hover:not(:disabled) { background: #138496; }
+        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: var(--zoom-bar-bg); padding: 5px; border-radius: 4px; border: 1px solid var(--zoom-border); flex-shrink: 0; }
+        .zoom-btn { background: var(--zoom-accent); color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 4px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
+        .zoom-btn:hover:not(:disabled) { background: var(--zoom-accent-hover); }
         .zoom-btn:disabled { background: #ccc; cursor: not-allowed; opacity: .6; }
         .zoom-media { display: block; margin: 0 auto; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
         .zoom-media.zoomed { width: var(--zw) !important; max-width: none !important; height: auto !important; }
+
+        :root { --zoom-accent: #17a2b8; --zoom-accent-hover: #138496; --zoom-border: #ced4da; --zoom-bar-bg: #f8f9fa; --zoom-max-h: 70vh; }
+        .slide { display: none; height: 100%; flex-direction: column; }
+        .slide.active { display: flex; }
+
+
+        .slide-counter { align-self: center; font-weight: bold; color: #555; font-size: var(--fs-btn); white-space: nowrap; min-width: 3.6em; text-align: center; }
+        .tf-row { flex-wrap: wrap; gap: 8px; }
+
+        @media (max-width: 700px) {
+            .slide-container { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; padding: 8px; }
+            .slide-header { margin-bottom: 10px; padding-bottom: 6px; }
+            .options div { flex-basis: 100%; }
+            .slide { height: auto; flex: 1 1 auto; min-height: 0; }
+            .slide-content { padding-bottom: 10px; }
+            .controls { position: static; width: 100%; box-shadow: none; padding: 8px 0 0; background: transparent; flex-shrink: 0; justify-content: space-between; }
+            .controls button { flex: 1; padding: 10px 6px; }
+            .controls .btn-fs { flex: 0 0 auto; }
+        }
+        @media (max-height: 500px) {
+            .slide-header { margin-bottom: 8px; padding-bottom: 6px; }
+            .slide-content { padding-bottom: 50px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+        }
 
         /* --- CSS MỤC LỤC VỚI HIỆU ỨNG CHẠY LÊN (SLIDE-UP) --- */
         .btn-toc { background: #17a2b8; color: white; cursor: pointer; }
@@ -112,9 +158,9 @@
             transform: translateY(0); 
         }
 
-        .toc-content h3 { margin-top: 0; color: #0056b3; font-size: 1.6vw; text-align: center; }
+        .toc-content h3 { margin-top: 0; color: #0056b3; font-size: var(--fs-toc-h); text-align: center; }
         .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 10px; overflow-y: auto; padding: 10px; max-height: 50vh; }
-        .toc-item { background: #e2eefb; border: 2px solid #007bff; color: #0056b3; font-weight: bold; font-size: 1.4vw; padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; transition: 0.2s; user-select: none; }
+        .toc-item { background: #e2eefb; border: 2px solid #007bff; color: #0056b3; font-weight: bold; font-size: var(--fs-toc); padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; transition: 0.2s; user-select: none; }
         .toc-item:hover { background: #007bff; color: white; }
         .toc-item.checked { border-color: #28a745; background: #d4edda; color: #155724; }
 
@@ -402,8 +448,10 @@
         
         <div class="controls">
             <button class="btn-nav btn-toc" onmouseenter="scheduleOpenToc()" onmouseleave="cancelOpenToc()" onclick="openToc()">📋 Mục lục</button>
-            <button class="btn-nav" id="prevBtn" onclick="changeSlide(-1)">Quay lại</button>
-            <button class="btn-nav" id="nextBtn" onclick="changeSlide(1)">Tiếp theo</button>
+            <button class="btn-nav" id="prevBtn" onclick="changeSlide(-1)" aria-label="Câu trước">Quay lại</button>
+            <span class="slide-counter" id="slideCounter" aria-live="polite"></span>
+            <button class="btn-nav" id="nextBtn" onclick="changeSlide(1)" aria-label="Câu sau">Tiếp theo</button>
+            <button class="btn-nav btn-fs" id="fsBtn" onclick="toggleFullscreen()" title="Toàn màn hình (F)" aria-label="Toàn màn hình">⛶</button>
         </div>
     </div>
 
@@ -412,7 +460,7 @@
         <div class="toc-content">
             <h3>Danh sách câu hỏi</h3>
             <div class="toc-grid" id="tocGrid"></div>
-            <button class="btn-nav" style="background: #dc3545; margin-top: 15px; font-size: 1.3vw; width: 120px; align-self: center;" onclick="closeToc()">Đóng</button>
+            <button class="btn-nav" style="background: #dc3545; margin-top: 15px; font-size: var(--fs-btn); width: 120px; align-self: center;" onclick="closeToc()">Đóng</button>
         </div>
     </div>
 
@@ -427,6 +475,7 @@
             });
             document.getElementById('prevBtn').disabled = index === 0;
             document.getElementById('nextBtn').disabled = index === slides.length - 1;
+            document.getElementById('slideCounter').textContent = (index + 1) + ' / ' + slides.length;
             
             const activeContent = slides[index].querySelector('.slide-content');
             if (activeContent) activeContent.scrollTop = 0;
@@ -564,22 +613,71 @@
         var openTimeout = null;
         var tocTimeout = null;
 
+        const MEDIA_SCOPE = '.slide';
         // =====================================================================
-        // XỬ LÝ SVG / ẢNH
+        // XỬ LÝ SVG / ẢNH (dùng chung cho quiz và trình chiếu)
+        // Mỗi template khai báo trước: const MEDIA_SCOPE = '.vung-chua-hinh, ...';
         // =====================================================================
+        const MEDIA_SVG_SEL = MEDIA_SCOPE.split(',').map(s => s.trim() + ' svg').join(', ');
+        const MEDIA_ALL_SEL = MEDIA_SCOPE.split(',').map(s => s.trim()).flatMap(s => [s + ' svg', s + ' img']).join(', ');
 
-        // 1) Chuẩn hóa SVG: thêm viewBox nếu thiếu để SVG co giãn đúng
+        // Chỉ nhận số thuần hoặc "px"; "10cm", "50%", "auto"... trả về NaN để không đọc sai đơn vị
+        function svgNum(v) {
+            if (v == null) return NaN;
+            const m = String(v).trim().match(/^([0-9]*\.?[0-9]+)(px)?$/i);
+            return m ? parseFloat(m[1]) : NaN;
+        }
+
+        // Đổi id trong từng SVG thành duy nhất để các hình không dùng nhầm clipPath/marker/gradient của nhau
+        let __svgSeq = 0;
+        function uniquifySvgIds(svg) {
+            if (svg.dataset.idsDone) return;
+            svg.dataset.idsDone = '1';
+            const withId = svg.querySelectorAll('[id]');
+            if (!withId.length) return;
+            const prefix = 'svg' + (++__svgSeq) + '_';
+            const map = {};
+            withId.forEach(n => { map[n.id] = prefix + n.id; });
+            const ids = Object.keys(map);
+            const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const urlRe = /url\(\s*(['"]?)#([^)'"\s]+)\1\s*\)/g;
+            const fixUrls = str => str.replace(urlRe, (m, q, id) => map[id] ? `url(${q}#${map[id]}${q})` : m);
+
+            svg.querySelectorAll('*').forEach(n => {
+                if (n.tagName.toLowerCase() === 'style') {
+                    let css = fixUrls(n.textContent);
+                    css = css.replace(new RegExp('#(' + ids.map(esc).join('|') + ')(?![\\w-])', 'g'), '#' + prefix + '$1');
+                    n.textContent = css;
+                    return;
+                }
+                Array.from(n.attributes).forEach(a => {
+                    if (a.name === 'id' || a.value.indexOf('#') < 0) return;
+                    if ((a.name === 'href' || a.name === 'xlink:href') && a.value.charAt(0) === '#') {
+                        const id = a.value.slice(1);
+                        if (map[id]) n.setAttribute(a.name, '#' + map[id]);
+                    } else {
+                        const nv = fixUrls(a.value);
+                        if (nv !== a.value) n.setAttribute(a.name, nv);
+                    }
+                });
+            });
+            withId.forEach(n => { n.id = map[n.id]; });
+        }
+
+        // Chuẩn hóa SVG: id duy nhất + thêm viewBox nếu thiếu để SVG co giãn đúng
         function normalizeSvgs() {
-            document.querySelectorAll('.slide svg').forEach(svg => {
-                if (svg.closest('mjx-container') || svg.dataset.normalized) return;
-                const w = parseFloat(svg.getAttribute('width'));
-                const h = parseFloat(svg.getAttribute('height'));
+            document.querySelectorAll(MEDIA_SVG_SEL).forEach(svg => {
+                if (svg.closest('mjx-container')) return;
+                uniquifySvgIds(svg);
+                if (svg.dataset.normalized) return;
+                const w = svgNum(svg.getAttribute('width'));
+                const h = svgNum(svg.getAttribute('height'));
 
                 if (!svg.hasAttribute('viewBox')) {
                     if (w > 0 && h > 0) {
                         svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
                     } else {
-                        try {   // SVG đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi slide/lời giải hiện ra
+                        try {   // đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi phần chứa nó hiện ra
                             const b = svg.getBBox();
                             if (b.width && b.height)
                                 svg.setAttribute('viewBox', `${b.x - 2} ${b.y - 2} ${b.width + 4} ${b.height + 4}`);
@@ -587,7 +685,7 @@
                     }
                 }
                 if (svg.hasAttribute('viewBox')) {
-                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }
+                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }  // kích thước gốc làm trần
                     svg.removeAttribute('height');
                     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                     svg.dataset.normalized = '1';
@@ -595,11 +693,16 @@
             });
         }
 
-        // 2) Zoom: phóng to bằng cách tăng chiều rộng, khung tự cao theo, cuộn bằng thanh cuộn gốc
-        function setupImageZoom() {
-            const els = document.querySelectorAll('.slide img, .slide svg');
+        // Zoom: phóng to bằng cách tăng chiều rộng thật, khung tự cao theo, cuộn bằng thanh cuộn gốc
+        const __zoomRefresh = new Set();
+        let __zoomResizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(__zoomResizeTimer);
+            __zoomResizeTimer = setTimeout(() => __zoomRefresh.forEach(fn => fn()), 150);
+        });
 
-            els.forEach(el => {
+        function setupImageZoom() {
+            document.querySelectorAll(MEDIA_ALL_SEL).forEach(el => {
                 if (el.closest('.zoom-container') || el.closest('mjx-container') || el.classList.contains('no-zoom')) return;
 
                 const wrapper = document.createElement('div');
@@ -619,6 +722,7 @@
                 const mk = (txt, title) => {
                     const b = document.createElement('button');
                     b.type = 'button'; b.className = 'zoom-btn'; b.innerHTML = txt; b.title = title;
+                    b.setAttribute('aria-label', title);
                     return b;
                 };
                 const btnIn = mk('➕', 'Phóng to'), btnOut = mk('➖', 'Thu nhỏ'), btnReset = mk('↺', 'Mặc định');
@@ -646,6 +750,7 @@
                 btnIn.onclick = () => apply(scale + STEP);
                 btnOut.onclick = () => apply(scale - STEP);
                 btnReset.onclick = () => apply(1);
+                __zoomRefresh.add(() => { if (scale > 1) apply(scale); });
 
                 // Ctrl + lăn chuột để zoom, nhấp đúp để phóng to/reset
                 viewport.addEventListener('wheel', e => {
@@ -672,13 +777,6 @@
                 viewport.addEventListener('pointerup', stop);
                 viewport.addEventListener('pointercancel', stop);
 
-                // Đổi kích thước cửa sổ / xoay màn hình: tính lại theo chiều rộng khung mới
-                let rt;
-                window.addEventListener('resize', () => {
-                    clearTimeout(rt);
-                    rt = setTimeout(() => { if (scale > 1) apply(scale); }, 150);
-                });
-
                 toolbar.append(btnIn, btnOut, btnReset);
                 wrapper.appendChild(toolbar);
                 apply(1);
@@ -689,7 +787,8 @@
 
         window.addEventListener('load', () => setTimeout(initMedia, 300));
 
-        // --- XỬ LÝ ĐỘ TRỄ MỞ VÀ ĐÓNG MỤC LỤC ---
+
+                // --- XỬ LÝ ĐỘ TRỄ MỞ VÀ ĐÓNG MỤC LỤC ---
         function initToc() {
             const tocGrid = document.getElementById('tocGrid');
             if (tocGrid.children.length > 0) return;
@@ -767,6 +866,55 @@
             }
             document.getElementById('tocModal').classList.remove('active');
         }
+
+        // --- ĐIỀU HƯỚNG BẰNG BÀN PHÍM, VUỐT VÀ TOÀN MÀN HÌNH ---
+        function toggleFullscreen() {
+            if (!document.fullscreenEnabled) return;
+            if (document.fullscreenElement) document.exitFullscreen();
+            else document.documentElement.requestFullscreen().catch(() => {});
+        }
+        if (!document.fullscreenEnabled) document.getElementById('fsBtn').style.display = 'none';
+
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const t = e.target, tag = t && t.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;   // đang gõ đáp án
+            const tocOpen = document.getElementById('tocModal').classList.contains('active');
+
+            if (e.key === 'Escape') { if (tocOpen) { closeToc(); e.preventDefault(); } return; }
+            if (e.key === 't' || e.key === 'T') { tocOpen ? closeToc() : openToc(); e.preventDefault(); return; }
+            if (tocOpen) return;
+
+            switch (e.key) {
+                case 'ArrowRight': case 'PageDown': changeSlide(1); break;
+                case 'ArrowLeft': case 'PageUp': changeSlide(-1); break;
+                case ' ': if (tag === 'BUTTON') return; changeSlide(e.shiftKey ? -1 : 1); break;
+                case 'Home': currentSlide = 0; showSlide(0); break;
+                case 'End': currentSlide = slides.length - 1; showSlide(currentSlide); break;
+                case 'f': case 'F': toggleFullscreen(); break;
+                default: return;
+            }
+            e.preventDefault();
+        });
+
+        // Vuốt ngang để chuyển câu (bỏ qua khi vuốt trong ảnh đang phóng to, công thức, bảng, ô nhập)
+        (function () {
+            let x0 = 0, y0 = 0, t0 = 0, track = false;
+            const box = document.getElementById('mainContainer');
+            box.addEventListener('touchstart', e => {
+                const blocked = e.target.closest('.zoom-viewport.can-pan, mjx-container, .table-responsive, input, textarea, .controls');
+                if (e.touches.length !== 1 || blocked) { track = false; return; }
+                x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); track = true;
+            }, { passive: true });
+            box.addEventListener('touchend', e => {
+                if (!track) return;
+                track = false;
+                const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+                if (Math.abs(dx) > 60 && Math.abs(dx) > 1.5 * Math.abs(dy) && Date.now() - t0 < 800) changeSlide(dx < 0 ? 1 : -1);
+            }, { passive: true });
+        })();
+
+        if (slides.length) showSlide(currentSlide);
     </script>
 </body>
 </html>
