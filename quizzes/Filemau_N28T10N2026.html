@@ -49,10 +49,31 @@
         #passwordPrompt input { padding: 10px; width: 60%; max-width: 250px; border: 1px solid #b3d4fc; border-radius: 4px; font-size: 16px; }
         #passwordPrompt button { width: auto; padding: 10px 20px; background: #1e88e5; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; margin-top: 10px; margin-left: 10px; }
         
-        /* --- SVG / ẢNH: co giãn theo màn hình, không cắt chữ --- */
+        /* --- SVG / ẢNH + KHUNG ZOOM DÙNG CHUNG (khung tự co giãn, không đặt chiều cao cố định) --- */
+        :root {
+            --zoom-accent: #1e88e5; --zoom-accent-hover: #1565c0;
+            --zoom-border: #b3d4fc; --zoom-bar-bg: #eef6fc; --zoom-max-h: none;
+        }
         svg { max-width: 100%; height: auto; display: block; margin: 10px auto; overflow: visible; }
         svg text { font-family: Arial, sans-serif; }
         img { max-width: 100%; height: auto; }
+        .zoom-container { display: flex; align-items: flex-start; gap: 10px; margin: 15px 0; }
+        .zoom-viewport {
+            flex: 1 1 auto; min-width: 0;
+            overflow: auto; -webkit-overflow-scrolling: touch;
+            border: 1px solid var(--zoom-border); border-radius: 4px; background: #fff;
+            box-sizing: border-box; padding: 4px;
+        }
+        /* chỉ giới hạn chiều cao và giữ cuộn bên trong khi ảnh đang được phóng to */
+        .zoom-viewport.can-pan { cursor: grab; max-height: var(--zoom-max-h); overscroll-behavior: contain; }
+        .zoom-viewport.dragging { cursor: grabbing; user-select: none; }
+        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: var(--zoom-bar-bg); padding: 5px; border-radius: 4px; border: 1px solid var(--zoom-border); flex-shrink: 0; }
+        .zoom-btn { background: var(--zoom-accent); color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 4px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
+        .zoom-btn:hover:not(:disabled) { background: var(--zoom-accent-hover); }
+        .zoom-btn:disabled { background: #ccc; cursor: not-allowed; opacity: .6; }
+        .zoom-media { display: block; margin: 0 auto; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+        .zoom-media.zoomed { width: var(--zw) !important; max-width: none !important; height: auto !important; }
+
         
         /* ===== Bổ sung của bộ chuyển đổi TeX2HTML (PyQt6) ===== */
         .tp { margin: 6px 0; }
@@ -79,22 +100,6 @@
 
 
 
-        /* --- KHUNG ZOOM (không đặt chiều cao cố định, khung tự co giãn theo nội dung) --- */
-        .zoom-container { display: flex; align-items: flex-start; gap: 10px; margin: 15px 0; }
-        .zoom-viewport {
-            flex: 1 1 auto; min-width: 0;
-            overflow: auto; -webkit-overflow-scrolling: touch;
-            border: 1px solid #b3d4fc; border-radius: 4px; background: #fff;
-            box-sizing: border-box; padding: 4px;
-        }
-        .zoom-viewport.can-pan { cursor: grab; }
-        .zoom-viewport.dragging { cursor: grabbing; user-select: none; }
-        .zoom-toolbar { display: flex; flex-direction: column; gap: 5px; background: #eef6fc; padding: 5px; border-radius: 4px; border: 1px solid #b3d4fc; flex-shrink: 0; }
-        .zoom-btn { background: #1e88e5; color: #fff; border: none; padding: 6px 10px; font-size: 14px; border-radius: 3px; cursor: pointer; transition: background .2s, opacity .2s; white-space: nowrap; }
-        .zoom-btn:hover:not(:disabled) { background: #1565c0; }
-        .zoom-btn:disabled { background: #b3d4fc; cursor: not-allowed; opacity: .6; }
-        .zoom-media { display: block; margin: 0 auto; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
-        .zoom-media.zoomed { width: var(--zw) !important; max-width: none !important; height: auto !important; }
     </style>
     
     <script>
@@ -409,22 +414,114 @@
             if (e.key === "Backspace" && current.value === "" && prevId) document.getElementById(prevId).focus();
         }
 
-        let timeLimit = 90 * 60;
-        let timerEl = document.getElementById("timer");
-        let countdown = setInterval(function() {
-            if(isSubmitted) { clearInterval(countdown); return; }
-            if(timeLimit <= 0) {
+        // =====================================================================
+        // LƯU TRẠNG THÁI (tải lại trang không mất bài, không reset đồng hồ)
+        // Thêm ?reset=1 vào đường dẫn để xóa trạng thái khi giáo viên muốn thử lại.
+        // =====================================================================
+        function hashStr(str) { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+        const STORE_KEY = 'quizstate:v2:' + location.pathname + '|' + document.title + '|' + hashStr(JSON.stringify(correctAnswers) + '|' + 90);
+        if (/[?&]reset=1(&|$)/.test(location.search)) { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+
+        function loadState() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; } }
+        let state = loadState() || {};
+        function saveState(patch) {
+            Object.assign(state, patch);
+            try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}   // bị chặn lưu (chế độ riêng tư...) thì chạy bằng bộ nhớ tạm
+        }
+        function newId() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2, 10)); }
+
+        const DURATION_MS = 90 * 60 * 1000;
+        if (!state.endTime) saveState({ endTime: Date.now() + DURATION_MS });
+        if (!state.attemptId) saveState({ attemptId: newId() });
+
+        function formFields() { return Array.from(document.querySelectorAll('#studentName, #studentClass, #quizForm input, #quizForm textarea')); }
+        function collectAnswers() { return formFields().map(el => (el.type === 'radio' || el.type === 'checkbox') ? (el.checked ? 1 : 0) : el.value); }
+        function restoreAnswers(arr) {
+            const f = formFields();
+            if (!Array.isArray(arr) || arr.length !== f.length) return;
+            f.forEach((el, i) => { if (el.type === 'radio' || el.type === 'checkbox') el.checked = !!arr[i]; else el.value = arr[i]; });
+        }
+
+        let saveTimer;
+        function scheduleSave() {
+            if (isSubmitted) return;
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => saveState({ answers: collectAnswers() }), 250);
+        }
+        document.addEventListener('input', scheduleSave);
+        document.addEventListener('change', scheduleSave);
+        window.addEventListener('pagehide', () => { if (!isSubmitted) saveState({ answers: collectAnswers() }); });
+
+        const resDiv = document.getElementById('result');
+        function showResult(html) { resDiv.style.display = 'block'; resDiv.innerHTML = html; }
+        function lockForm() {
+            document.getElementById('submitBtn').style.display = 'none';
+            document.querySelectorAll('#quizForm input, #quizForm textarea, #studentName, #studentClass').forEach(el => el.disabled = true);
+        }
+        const scoreSpan = s => `<span style="font-size: 24px; color: red;">${s}</span>`;
+
+        // Gửi kết quả; mất mạng thì giữ lại và tự gửi lại (khi có mạng, hoặc mỗi 15 giây)
+        let sending = false;
+        function sendPayload() {
+            const finalScoreString = state.finalScore;
+            if (!GAS_URL) {
+                saveState({ sent: true });
+                showResult(`Đã chấm xong (chưa cấu hình nơi nhận kết quả).<br>Điểm của bạn: ${scoreSpan(finalScoreString)}`);
+                return;
+            }
+            if (sending) return;
+            sending = true;
+            fetch(GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                keepalive: true,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(state.payload)
+            }).then(() => {
+                sending = false;
+                saveState({ sent: true });
+                showResult(`Nộp bài thành công!<br>Điểm của bạn: ${scoreSpan(finalScoreString)}`);
+            }).catch(() => {
+                sending = false;
+                showResult(`Đã chấm xong nhưng <b>chưa gửi được</b> kết quả (mạng yếu).<br>Em hãy giữ nguyên trang này, bài sẽ tự gửi lại khi có mạng.<br>Điểm của bạn: ${scoreSpan(finalScoreString)}`);
+            });
+        }
+        function retryPending() { if (state.submitted && !state.sent) sendPayload(); }
+        window.addEventListener('online', retryPending);
+        setInterval(retryPending, 15000);
+
+        // Đồng hồ tính theo giờ kết thúc nên không lệch khi tab ở nền hoặc điện thoại khóa màn hình
+        const timerEl = document.getElementById("timer");
+        let timeoutFired = false;
+        const countdown = setInterval(tick, 500);
+        document.addEventListener('visibilitychange', tick);
+        function tick() {
+            if (isSubmitted) { clearInterval(countdown); return; }
+            const remain = Math.ceil((state.endTime - Date.now()) / 1000);
+            if (remain <= 0) {
+                if (timeoutFired) return;
+                timeoutFired = true;
                 clearInterval(countdown);
                 timerEl.innerHTML = "HẾT GIỜ!";
                 alert("Đã hết thời gian làm bài. Hệ thống tự động nộp bài!");
-                submitQuiz(true); 
+                submitQuiz(true);
             } else {
-                let m = Math.floor(timeLimit / 60);
-                let s = timeLimit % 60;
+                const m = Math.floor(remain / 60), s = remain % 60;
                 timerEl.innerHTML = m.toString().padStart(2, '0') + ":" + s.toString().padStart(2, '0');
-                timeLimit--;
             }
-        }, 1000);
+        }
+
+        // Khôi phục khi mở lại trang
+        restoreAnswers(state.answers);
+        if (state.submitted) {
+            isSubmitted = true;
+            lockForm();
+            timerEl.innerHTML = "ĐÃ NỘP BÀI";
+            if (state.sent) showResult(`Nộp bài thành công!<br>Điểm của bạn: ${scoreSpan(state.finalScore)}`);
+            else { showResult('Đang gửi lại kết quả...'); retryPending(); }
+        } else {
+            tick();
+        }
 
         function submitQuiz(autoSubmit = false) {
             if (isSubmitted) return;
@@ -514,32 +611,14 @@
             const finalScoreString = `${score.toFixed(2)}/3.5`;
             payload['score'] = score.toFixed(2);
             payload['maxScore'] = '3.5';
+            payload['attemptId'] = state.attemptId;   // để Apps Script bỏ các lần gửi trùng
 
-            document.getElementById('submitBtn').style.display = 'none';
-            const allInputs = document.querySelectorAll('#quizForm input, #quizForm textarea');
-            allInputs.forEach(input => input.disabled = true);
-
-            const resDiv = document.getElementById('result');
-            resDiv.style.display = 'block';
-            resDiv.innerHTML = `Đang gửi kết quả...`;
-
-            if (!GAS_URL) {
-                resDiv.innerHTML = `Đã chấm xong (chưa cấu hình nơi nhận kết quả).<br>Điểm của bạn: <span style="font-size: 24px; color: red;">${finalScoreString}</span>`;
-                return;
-            }
-
-            fetch(GAS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams(payload)
-            }).then(() => {
-                resDiv.innerHTML = `Nộp bài thành công!<br>Điểm của bạn: <span style="font-size: 24px; color: red;">${finalScoreString}</span>`;
-            }).catch(err => {
-                resDiv.innerHTML = `Nộp bài thành công (Mạng yếu).<br>Điểm: <span style="font-size: 24px; color: red;">${finalScoreString}</span>`;
-            });
+            lockForm();
+            saveState({ answers: collectAnswers(), submitted: true, sent: false, payload: payload, finalScore: finalScoreString });
+            showResult('Đã chấm xong, đang gửi kết quả...');
+            sendPayload();
         }
-        
+
         function showPasswordPrompt() {
             document.getElementById('passwordPrompt').style.display = 'block';
             document.getElementById('viewSolBtn').style.display = 'none';
@@ -651,22 +730,71 @@
             if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise().then(initMedia);
         }
 
+        const MEDIA_SCOPE = '.question, .solution-box';
         // =====================================================================
-        // XỬ LÝ SVG / ẢNH
+        // XỬ LÝ SVG / ẢNH (dùng chung cho quiz và trình chiếu)
+        // Mỗi template khai báo trước: const MEDIA_SCOPE = '.vung-chua-hinh, ...';
         // =====================================================================
+        const MEDIA_SVG_SEL = MEDIA_SCOPE.split(',').map(s => s.trim() + ' svg').join(', ');
+        const MEDIA_ALL_SEL = MEDIA_SCOPE.split(',').map(s => s.trim()).flatMap(s => [s + ' svg', s + ' img']).join(', ');
 
-        // 1) Chuẩn hóa SVG: thêm viewBox nếu thiếu để SVG co giãn đúng
+        // Chỉ nhận số thuần hoặc "px"; "10cm", "50%", "auto"... trả về NaN để không đọc sai đơn vị
+        function svgNum(v) {
+            if (v == null) return NaN;
+            const m = String(v).trim().match(/^([0-9]*\.?[0-9]+)(px)?$/i);
+            return m ? parseFloat(m[1]) : NaN;
+        }
+
+        // Đổi id trong từng SVG thành duy nhất để các hình không dùng nhầm clipPath/marker/gradient của nhau
+        let __svgSeq = 0;
+        function uniquifySvgIds(svg) {
+            if (svg.dataset.idsDone) return;
+            svg.dataset.idsDone = '1';
+            const withId = svg.querySelectorAll('[id]');
+            if (!withId.length) return;
+            const prefix = 'svg' + (++__svgSeq) + '_';
+            const map = {};
+            withId.forEach(n => { map[n.id] = prefix + n.id; });
+            const ids = Object.keys(map);
+            const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const urlRe = /url\(\s*(['"]?)#([^)'"\s]+)\1\s*\)/g;
+            const fixUrls = str => str.replace(urlRe, (m, q, id) => map[id] ? `url(${q}#${map[id]}${q})` : m);
+
+            svg.querySelectorAll('*').forEach(n => {
+                if (n.tagName.toLowerCase() === 'style') {
+                    let css = fixUrls(n.textContent);
+                    css = css.replace(new RegExp('#(' + ids.map(esc).join('|') + ')(?![\\w-])', 'g'), '#' + prefix + '$1');
+                    n.textContent = css;
+                    return;
+                }
+                Array.from(n.attributes).forEach(a => {
+                    if (a.name === 'id' || a.value.indexOf('#') < 0) return;
+                    if ((a.name === 'href' || a.name === 'xlink:href') && a.value.charAt(0) === '#') {
+                        const id = a.value.slice(1);
+                        if (map[id]) n.setAttribute(a.name, '#' + map[id]);
+                    } else {
+                        const nv = fixUrls(a.value);
+                        if (nv !== a.value) n.setAttribute(a.name, nv);
+                    }
+                });
+            });
+            withId.forEach(n => { n.id = map[n.id]; });
+        }
+
+        // Chuẩn hóa SVG: id duy nhất + thêm viewBox nếu thiếu để SVG co giãn đúng
         function normalizeSvgs() {
-            document.querySelectorAll('.question svg, .solution-box svg').forEach(svg => {
-                if (svg.closest('mjx-container') || svg.dataset.normalized) return;
-                const w = parseFloat(svg.getAttribute('width'));
-                const h = parseFloat(svg.getAttribute('height'));
+            document.querySelectorAll(MEDIA_SVG_SEL).forEach(svg => {
+                if (svg.closest('mjx-container')) return;
+                uniquifySvgIds(svg);
+                if (svg.dataset.normalized) return;
+                const w = svgNum(svg.getAttribute('width'));
+                const h = svgNum(svg.getAttribute('height'));
 
                 if (!svg.hasAttribute('viewBox')) {
                     if (w > 0 && h > 0) {
                         svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
                     } else {
-                        try {   // SVG đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi hiện lời giải
+                        try {   // đang bị ẩn thì getBBox lỗi -> sẽ thử lại khi phần chứa nó hiện ra
                             const b = svg.getBBox();
                             if (b.width && b.height)
                                 svg.setAttribute('viewBox', `${b.x - 2} ${b.y - 2} ${b.width + 4} ${b.height + 4}`);
@@ -674,7 +802,7 @@
                     }
                 }
                 if (svg.hasAttribute('viewBox')) {
-                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }  // giữ kích thước gốc làm trần
+                    if (w > 0) { svg.style.width = '100%'; svg.style.maxWidth = w + 'px'; }  // kích thước gốc làm trần
                     svg.removeAttribute('height');
                     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
                     svg.dataset.normalized = '1';
@@ -682,11 +810,16 @@
             });
         }
 
-        // 2) Zoom: phóng to bằng cách tăng chiều rộng, khung tự cao theo, cuộn bằng thanh cuộn gốc
-        function setupImageZoom() {
-            const els = document.querySelectorAll('.question img, .question svg, .solution-box img, .solution-box svg');
+        // Zoom: phóng to bằng cách tăng chiều rộng thật, khung tự cao theo, cuộn bằng thanh cuộn gốc
+        const __zoomRefresh = new Set();
+        let __zoomResizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(__zoomResizeTimer);
+            __zoomResizeTimer = setTimeout(() => __zoomRefresh.forEach(fn => fn()), 150);
+        });
 
-            els.forEach(el => {
+        function setupImageZoom() {
+            document.querySelectorAll(MEDIA_ALL_SEL).forEach(el => {
                 if (el.closest('.zoom-container') || el.closest('mjx-container') || el.classList.contains('no-zoom')) return;
 
                 const wrapper = document.createElement('div');
@@ -706,12 +839,12 @@
                 const mk = (txt, title) => {
                     const b = document.createElement('button');
                     b.type = 'button'; b.className = 'zoom-btn'; b.innerHTML = txt; b.title = title;
+                    b.setAttribute('aria-label', title);
                     return b;
                 };
                 const btnIn = mk('➕', 'Phóng to'), btnOut = mk('➖', 'Thu nhỏ'), btnReset = mk('↺', 'Mặc định');
 
                 function apply(newScale) {
-                    // nhớ vị trí tâm đang xem để phóng to đúng chỗ
                     const cx = viewport.scrollWidth ? (viewport.scrollLeft + viewport.clientWidth / 2) / viewport.scrollWidth : 0.5;
                     const cy = viewport.scrollHeight ? (viewport.scrollTop + viewport.clientHeight / 2) / viewport.scrollHeight : 0.5;
 
@@ -734,6 +867,7 @@
                 btnIn.onclick = () => apply(scale + STEP);
                 btnOut.onclick = () => apply(scale - STEP);
                 btnReset.onclick = () => apply(1);
+                __zoomRefresh.add(() => { if (scale > 1) apply(scale); });
 
                 // Ctrl + lăn chuột để zoom, nhấp đúp để phóng to/reset
                 viewport.addEventListener('wheel', e => {
@@ -760,13 +894,6 @@
                 viewport.addEventListener('pointerup', stop);
                 viewport.addEventListener('pointercancel', stop);
 
-                // Đổi kích thước cửa sổ / xoay điện thoại: tính lại theo chiều rộng khung mới
-                let rt;
-                window.addEventListener('resize', () => {
-                    clearTimeout(rt);
-                    rt = setTimeout(() => { if (scale > 1) apply(scale); }, 150);
-                });
-
                 toolbar.append(btnIn, btnOut, btnReset);
                 wrapper.appendChild(toolbar);
                 apply(1);
@@ -776,6 +903,7 @@
         function initMedia() { normalizeSvgs(); setupImageZoom(); }
 
         window.addEventListener('load', () => setTimeout(initMedia, 300));
+
     </script>
 </body>
 </html>
